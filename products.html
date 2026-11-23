@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>المنتجات</title>
+
+<style>
+
+body{
+font-family:tahoma;
+background:#f4f6f9;
+padding:15px;
+}
+
+.card{
+background:#fff;
+padding:15px;
+border-radius:12px;
+margin-bottom:10px;
+box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+
+input{
+width:100%;
+padding:12px;
+margin-top:8px;
+margin-bottom:8px;
+}
+
+button{
+width:100%;
+padding:12px;
+border:none;
+background:#16a34a;
+color:white;
+border-radius:10px;
+}
+
+.product{
+background:white;
+padding:12px;
+margin-top:8px;
+border-radius:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>📦 إدارة المنتجات</h2>
+
+<input
+id="productName"
+placeholder="اسم المنتج">
+
+<button onclick="addProduct()">
+
+إضافة منتج
+
+</button>
+
+</div>
+
+<div id="productsList">
+</div>
+
+<script>
+
+function getProducts(){
+
+return JSON.parse(
+
+localStorage.getItem(
+"products"
+)
+
+) || [];
+
+}
+
+function saveProducts(products){
+
+localStorage.setItem(
+
+"products",
+
+JSON.stringify(products)
+
+);
+
+}
+
+function addProduct(){
+
+const name =
+
+document.getElementById(
+"productName"
+).value.trim();
+
+if(!name){
+
+alert("اكتب اسم المنتج");
+
+return;
+
+}
+
+const products =
+getProducts();
+
+products.push({
+
+id:Date.now(),
+
+name:name
+
+});
+
+saveProducts(products);
+
+document.getElementById(
+"productName"
+).value="";
+
+renderProducts();
+
+}
+
+function renderProducts(){
+
+const products =
+getProducts();
+
+const list =
+document.getElementById(
+"productsList"
+);
+
+list.innerHTML="";
+
+products.forEach(product=>{
+
+list.innerHTML += `
+
+<div class="product">
+
+${product.name}
+
+</div>
+
+`;
+
+});
+
+}
+
+renderProducts();
+
+</script>
+
+</body>
+</html>
