@@ -36,13 +36,15 @@ margin-bottom:12px;
 box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
 
-input{
+input,
+select{
 width:100%;
 padding:14px;
 margin-bottom:10px;
 border:1px solid #ddd;
 border-radius:12px;
 font-size:16px;
+background:white;
 }
 
 button{
@@ -55,15 +57,20 @@ font-weight:bold;
 cursor:pointer;
 }
 
+.camera-btn{
+background:#2563eb;
+color:white;
+margin-bottom:10px;
+}
+
 .add-btn{
 background:#16a34a;
 color:white;
 }
 
-.camera-btn{
-background:#2563eb;
-color:white;
-margin-bottom:10px;
+.add-btn:disabled{
+background:#9ca3af;
+cursor:not-allowed;
 }
 
 .delete-btn{
@@ -77,24 +84,6 @@ text-align:center;
 font-weight:bold;
 margin-top:10px;
 color:#2563eb;
-}
-
-.product{
-background:white;
-padding:14px;
-border-radius:14px;
-margin-bottom:12px;
-box-shadow:0 2px 8px rgba(0,0,0,.08);
-}
-
-.product-name{
-font-size:18px;
-font-weight:bold;
-margin-bottom:8px;
-}
-
-.line{
-margin-top:6px;
 }
 
 .preview{
@@ -111,13 +100,32 @@ text-align:center;
 border-radius:14px;
 }
 
+.product{
+background:white;
+padding:14px;
+border-radius:14px;
+margin-bottom:12px;
+box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
 .product-image{
 width:100%;
 border-radius:12px;
 margin-bottom:10px;
 }
 
+.product-name{
+font-size:18px;
+font-weight:bold;
+margin-bottom:8px;
+}
+
+.line{
+margin-top:6px;
+}
+
 </style>
+
 </head>
 
 <body>
@@ -134,7 +142,7 @@ margin-bottom:10px;
 
 <input
 id="name"
-placeholder="اسم المنتج">
+placeholder="اسم المنتج *">
 
 <button
 type="button"
@@ -156,26 +164,43 @@ style="display:none">
 id="preview"
 class="preview">
 
-<input
-id="category"
-placeholder="الفئة">
+<select id="category">
+
+<option value="">
+اختر الفئة *
+</option>
+
+<option value="معلبات">معلبات</option>
+<option value="حبوب">حبوب</option>
+<option value="بقوليات">بقوليات</option>
+<option value="ألبان">ألبان</option>
+<option value="مشروبات">مشروبات</option>
+<option value="حلويات">حلويات</option>
+<option value="مجمدات">مجمدات</option>
+<option value="منظفات">منظفات</option>
+<option value="أدوية">أدوية</option>
+<option value="أخرى">أخرى</option>
+
+</select>
 
 <input
 id="quantity"
 type="number"
-placeholder="الكمية">
+placeholder="الكمية *">
 
 <input
 id="price"
 type="number"
-placeholder="السعر">
+placeholder="السعر *">
 
 <input
 id="expiry"
 type="date">
 
 <button
+id="addBtn"
 class="add-btn"
+disabled
 onclick="addProduct()">
 
 ➕ إضافة منتج
@@ -196,7 +221,7 @@ id="counter">
 
 <script>
 
-let currentImage = "";
+let currentImage="";
 
 function openCamera(){
 
@@ -219,15 +244,14 @@ function(event){
 const file =
 event.target.files[0];
 
-if(!file)return;
+if(!file) return;
 
 const reader =
 new FileReader();
 
-reader.onload =
-function(){
+reader.onload=function(){
 
-currentImage =
+currentImage=
 reader.result;
 
 const preview =
@@ -243,9 +267,7 @@ preview.style.display =
 
 };
 
-reader.readAsDataURL(
-file
-);
+reader.readAsDataURL(file);
 
 });
 
@@ -264,16 +286,44 @@ localStorage.getItem(
 function saveProducts(products){
 
 localStorage.setItem(
-
 "products",
-
-JSON.stringify(
-products
-)
-
+JSON.stringify(products)
 );
 
 }
+
+function validateForm(){
+
+const valid =
+
+document.getElementById("name").value.trim() &&
+document.getElementById("category").value &&
+document.getElementById("quantity").value &&
+document.getElementById("price").value;
+
+document.getElementById(
+"addBtn"
+).disabled = !valid;
+
+}
+
+document
+.querySelectorAll(
+"input,select"
+)
+.forEach(el=>{
+
+el.addEventListener(
+"input",
+validateForm
+);
+
+el.addEventListener(
+"change",
+validateForm
+);
+
+});
 
 function addProduct(){
 
@@ -282,10 +332,35 @@ document.getElementById(
 "name"
 ).value.trim();
 
-if(!name){
+const category =
+document.getElementById(
+"category"
+).value;
+
+const quantity =
+document.getElementById(
+"quantity"
+).value;
+
+const price =
+document.getElementById(
+"price"
+).value;
+
+const expiry =
+document.getElementById(
+"expiry"
+).value;
+
+if(
+!name ||
+!category ||
+!quantity ||
+!price
+){
 
 alert(
-"اكتب اسم المنتج"
+"أكمل الحقول المطلوبة"
 );
 
 return;
@@ -296,27 +371,15 @@ const product = {
 
 id:Date.now(),
 
-name:name,
+name,
 
-category:
-document.getElementById(
-"category"
-).value,
+category,
 
-quantity:
-document.getElementById(
-"quantity"
-).value,
+quantity,
 
-price:
-document.getElementById(
-"price"
-).value,
+price,
 
-expiry:
-document.getElementById(
-"expiry"
-).value,
+expiry,
 
 image:currentImage
 
@@ -364,6 +427,8 @@ document.getElementById(
 
 currentImage="";
 
+validateForm();
+
 }
 
 function deleteProduct(id){
@@ -399,13 +464,12 @@ document.getElementById(
 "counter"
 ).textContent =
 
-"عدد المنتجات: "
-+
+"عدد المنتجات: " +
 products.length;
 
 if(products.length===0){
 
-list.innerHTML =
+list.innerHTML=
 
 '<div class="empty">لا توجد منتجات</div>';
 
@@ -423,11 +487,10 @@ list.innerHTML += `
 
 ${p.image ?
 
-`<img
-src="${p.image}"
+`<img src="${p.image}"
 class="product-image">`
 
-: ''}
+: ""}
 
 <div class="product-name">
 
@@ -436,31 +499,19 @@ class="product-image">`
 </div>
 
 <div class="line">
-
-🏷 ${p.category || "-"}
-
+🏷 ${p.category}
 </div>
 
 <div class="line">
-
-📊 الكمية:
-${p.quantity || 0}
-
+📊 الكمية: ${p.quantity}
 </div>
 
 <div class="line">
-
-💰 السعر:
-${p.price || 0}
-ريال
-
+💰 السعر: ${p.price} ريال
 </div>
 
 <div class="line">
-
-📅
-${p.expiry || "-"}
-
+📅 ${p.expiry || "-"}
 </div>
 
 <button
