@@ -2,9 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>المنتجات</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة المنتجات</title>
 
 <style>
 
@@ -22,13 +21,10 @@ padding:12px;
 
 .header{
 background:white;
-padding:16px;
+padding:18px;
 border-radius:16px;
 margin-bottom:12px;
 box-shadow:0 2px 8px rgba(0,0,0,.08);
-}
-
-.header h2{
 text-align:center;
 }
 
@@ -56,11 +52,18 @@ border:none;
 border-radius:12px;
 font-size:17px;
 font-weight:bold;
+cursor:pointer;
 }
 
 .add-btn{
 background:#16a34a;
 color:white;
+}
+
+.camera-btn{
+background:#2563eb;
+color:white;
+margin-bottom:10px;
 }
 
 .delete-btn{
@@ -91,8 +94,14 @@ margin-bottom:8px;
 }
 
 .line{
-margin-top:4px;
-font-size:15px;
+margin-top:6px;
+}
+
+.preview{
+width:100%;
+border-radius:12px;
+margin-bottom:10px;
+display:none;
 }
 
 .empty{
@@ -102,9 +111,15 @@ text-align:center;
 border-radius:14px;
 }
 
-</style>
+.product-image{
+width:100%;
+border-radius:12px;
+margin-bottom:10px;
+}
 
+</style>
 </head>
+
 <body>
 
 <div class="header">
@@ -120,6 +135,26 @@ border-radius:14px;
 <input
 id="name"
 placeholder="اسم المنتج">
+
+<button
+type="button"
+class="camera-btn"
+onclick="openCamera()">
+
+📷 تصوير المنتج
+
+</button>
+
+<input
+type="file"
+id="cameraInput"
+accept="image/*"
+capture="environment"
+style="display:none">
+
+<img
+id="preview"
+class="preview">
 
 <input
 id="category"
@@ -157,9 +192,62 @@ id="counter">
 
 </div>
 
-<div id="list"></div>
+<div id="productsList"></div>
 
 <script>
+
+let currentImage = "";
+
+function openCamera(){
+
+document
+.getElementById(
+"cameraInput"
+)
+.click();
+
+}
+
+document
+.getElementById(
+"cameraInput"
+)
+.addEventListener(
+"change",
+function(event){
+
+const file =
+event.target.files[0];
+
+if(!file)return;
+
+const reader =
+new FileReader();
+
+reader.onload =
+function(){
+
+currentImage =
+reader.result;
+
+const preview =
+document.getElementById(
+"preview"
+);
+
+preview.src =
+reader.result;
+
+preview.style.display =
+"block";
+
+};
+
+reader.readAsDataURL(
+file
+);
+
+});
 
 function getProducts(){
 
@@ -179,7 +267,9 @@ localStorage.setItem(
 
 "products",
 
-JSON.stringify(products)
+JSON.stringify(
+products
+)
 
 );
 
@@ -226,7 +316,9 @@ document.getElementById(
 expiry:
 document.getElementById(
 "expiry"
-).value
+).value,
+
+image:currentImage
 
 };
 
@@ -236,6 +328,14 @@ getProducts();
 products.push(product);
 
 saveProducts(products);
+
+clearForm();
+
+render();
+
+}
+
+function clearForm(){
 
 document.getElementById(
 "name"
@@ -257,23 +357,25 @@ document.getElementById(
 "expiry"
 ).value="";
 
-render();
+document.getElementById(
+"preview"
+).style.display =
+"none";
+
+currentImage="";
 
 }
 
 function deleteProduct(id){
 
-if(!confirm("حذف المنتج؟")){
-
+if(!confirm("حذف المنتج؟"))
 return;
-
-}
 
 const products =
 
 getProducts().filter(
 
-p=>p.id!==id
+p => p.id !== id
 
 );
 
@@ -290,19 +392,20 @@ getProducts();
 
 const list =
 document.getElementById(
-"list"
+"productsList"
 );
 
 document.getElementById(
 "counter"
 ).textContent =
 
-"عدد المنتجات: " +
+"عدد المنتجات: "
++
 products.length;
 
 if(products.length===0){
 
-list.innerHTML=
+list.innerHTML =
 
 '<div class="empty">لا توجد منتجات</div>';
 
@@ -317,6 +420,14 @@ products.forEach(p=>{
 list.innerHTML += `
 
 <div class="product">
+
+${p.image ?
+
+`<img
+src="${p.image}"
+class="product-image">`
+
+: ''}
 
 <div class="product-name">
 
@@ -341,7 +452,6 @@ ${p.quantity || 0}
 
 💰 السعر:
 ${p.price || 0}
-
 ريال
 
 </div>
