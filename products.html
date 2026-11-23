@@ -2,8 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إدارة المنتجات</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>المنتجات</title>
 
 <style>
 
@@ -21,14 +22,13 @@ padding:12px;
 
 .header{
 background:white;
-padding:18px;
+padding:16px;
 border-radius:16px;
 margin-bottom:12px;
 box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
 
-.header h1{
-font-size:28px;
+.header h2{
 text-align:center;
 }
 
@@ -43,55 +43,63 @@ box-shadow:0 2px 8px rgba(0,0,0,.08);
 input{
 width:100%;
 padding:14px;
-font-size:16px;
+margin-bottom:10px;
 border:1px solid #ddd;
 border-radius:12px;
-margin-bottom:10px;
+font-size:16px;
 }
 
 button{
 width:100%;
-height:54px;
+height:52px;
 border:none;
 border-radius:12px;
+font-size:17px;
+font-weight:bold;
+}
+
+.add-btn{
 background:#16a34a;
 color:white;
-font-size:18px;
-font-weight:bold;
-cursor:pointer;
+}
+
+.delete-btn{
+background:#dc2626;
+color:white;
+margin-top:10px;
 }
 
 .counter{
-margin-top:10px;
 text-align:center;
 font-weight:bold;
+margin-top:10px;
 color:#2563eb;
 }
 
 .product{
 background:white;
-padding:16px;
+padding:14px;
 border-radius:14px;
-margin-bottom:10px;
-box-shadow:0 1px 6px rgba(0,0,0,.08);
+margin-bottom:12px;
+box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
 
 .product-name{
 font-size:18px;
 font-weight:bold;
-margin-bottom:10px;
+margin-bottom:8px;
 }
 
-.delete-btn{
-background:#dc2626;
-height:42px;
+.line{
+margin-top:4px;
 font-size:15px;
 }
 
 .empty{
-text-align:center;
+background:white;
 padding:20px;
-color:#666;
+text-align:center;
+border-radius:14px;
 }
 
 </style>
@@ -101,21 +109,41 @@ color:#666;
 
 <div class="header">
 
-<h1>
+<h2>
 📦 إدارة المنتجات
-</h1>
+</h2>
 
 </div>
 
 <div class="card">
 
 <input
-id="productName"
+id="name"
 placeholder="اسم المنتج">
 
-<button onclick="addProduct()">
+<input
+id="category"
+placeholder="الفئة">
 
-إضافة منتج
+<input
+id="quantity"
+type="number"
+placeholder="الكمية">
+
+<input
+id="price"
+type="number"
+placeholder="السعر">
+
+<input
+id="expiry"
+type="date">
+
+<button
+class="add-btn"
+onclick="addProduct()">
+
+➕ إضافة منتج
 
 </button>
 
@@ -129,24 +157,18 @@ id="counter">
 
 </div>
 
-<div id="productsList">
-
-<div class="empty">
-
-لا توجد منتجات
-
-</div>
-
-</div>
+<div id="list"></div>
 
 <script>
 
 function getProducts(){
 
 return JSON.parse(
+
 localStorage.getItem(
 "products"
 )
+
 ) || [];
 
 }
@@ -154,23 +176,23 @@ localStorage.getItem(
 function saveProducts(products){
 
 localStorage.setItem(
+
 "products",
+
 JSON.stringify(products)
+
 );
 
 }
 
 function addProduct(){
 
-const input =
-document.getElementById(
-"productName"
-);
-
 const name =
-input.value.trim();
+document.getElementById(
+"name"
+).value.trim();
 
-if(name === ""){
+if(!name){
 
 alert(
 "اكتب اسم المنتج"
@@ -180,48 +202,95 @@ return;
 
 }
 
-const products =
-getProducts();
-
-products.push({
+const product = {
 
 id:Date.now(),
 
-name:name
+name:name,
 
-});
+category:
+document.getElementById(
+"category"
+).value,
+
+quantity:
+document.getElementById(
+"quantity"
+).value,
+
+price:
+document.getElementById(
+"price"
+).value,
+
+expiry:
+document.getElementById(
+"expiry"
+).value
+
+};
+
+const products =
+getProducts();
+
+products.push(product);
 
 saveProducts(products);
 
-input.value="";
+document.getElementById(
+"name"
+).value="";
 
-renderProducts();
+document.getElementById(
+"category"
+).value="";
+
+document.getElementById(
+"quantity"
+).value="";
+
+document.getElementById(
+"price"
+).value="";
+
+document.getElementById(
+"expiry"
+).value="";
+
+render();
 
 }
 
 function deleteProduct(id){
 
+if(!confirm("حذف المنتج؟")){
+
+return;
+
+}
+
 const products =
+
 getProducts().filter(
 
-p => p.id !== id
+p=>p.id!==id
 
 );
 
 saveProducts(products);
 
-renderProducts();
+render();
 
 }
 
-function renderProducts(){
+function render(){
 
 const products =
 getProducts();
 
 const list =
 document.getElementById(
-"productsList"
+"list"
 );
 
 document.getElementById(
@@ -231,25 +300,19 @@ document.getElementById(
 "عدد المنتجات: " +
 products.length;
 
-if(products.length === 0){
+if(products.length===0){
 
-list.innerHTML = `
+list.innerHTML=
 
-<div class="empty">
-
-لا توجد منتجات
-
-</div>
-
-`;
+'<div class="empty">لا توجد منتجات</div>';
 
 return;
 
 }
 
-list.innerHTML = "";
+list.innerHTML="";
 
-products.forEach(product=>{
+products.forEach(p=>{
 
 list.innerHTML += `
 
@@ -257,15 +320,44 @@ list.innerHTML += `
 
 <div class="product-name">
 
-📦 ${product.name}
+📦 ${p.name}
+
+</div>
+
+<div class="line">
+
+🏷 ${p.category || "-"}
+
+</div>
+
+<div class="line">
+
+📊 الكمية:
+${p.quantity || 0}
+
+</div>
+
+<div class="line">
+
+💰 السعر:
+${p.price || 0}
+
+ريال
+
+</div>
+
+<div class="line">
+
+📅
+${p.expiry || "-"}
 
 </div>
 
 <button
 class="delete-btn"
-onclick="deleteProduct(${product.id})">
+onclick="deleteProduct(${p.id})">
 
-حذف
+🗑 حذف
 
 </button>
 
@@ -277,7 +369,7 @@ onclick="deleteProduct(${product.id})">
 
 }
 
-renderProducts();
+render();
 
 </script>
 
