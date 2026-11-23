@@ -2,133 +2,35 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نظام إدارة المخزون</title>
-
-<style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Tahoma,sans-serif;
-}
-
-body{
-background:#f3f4f6;
-min-height:100vh;
-display:flex;
-justify-content:center;
-align-items:center;
-padding:20px;
-}
-
-.card{
-background:#fff;
-width:100%;
-max-width:420px;
-padding:24px;
-border-radius:16px;
-box-shadow:0 4px 16px rgba(0,0,0,.1);
-}
-
-.logo{
-font-size:26px;
-text-align:center;
-margin-bottom:20px;
-font-weight:bold;
-color:#2563eb;
-}
-
-label{
-display:block;
-margin-top:12px;
-margin-bottom:6px;
-font-weight:bold;
-}
-
-input{
-width:100%;
-padding:12px;
-border:1px solid #d1d5db;
-border-radius:10px;
-font-size:15px;
-}
-
-button{
-width:100%;
-margin-top:20px;
-padding:14px;
-border:none;
-border-radius:10px;
-background:#2563eb;
-color:white;
-font-size:16px;
-font-weight:bold;
-cursor:pointer;
-}
-
-button:hover{
-background:#1d4ed8;
-}
-
-.error{
-color:#dc2626;
-margin-top:10px;
-display:none;
-text-align:center;
-}
-
-.demo{
-margin-top:20px;
-background:#eef2ff;
-padding:12px;
-border-radius:10px;
-font-size:13px;
-}
-
-</style>
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تجربة الدخول</title>
 </head>
+<body style="font-family:tahoma;padding:20px">
 
-<body>
+<h2>تسجيل الدخول</h2>
 
-<div class="card">
+<input id="family" placeholder="عائلة أ"><br><br>
 
-<div class="logo">
-📦 نظام إدارة المخزون
-</div>
+<input id="email" placeholder="admin@familya.com"><br><br>
 
-<label>
-اسم العائلة
-</label>
-
-<input
-id="family"
-placeholder="عائلة أ أو عائلة ب">
-
-<label>
-البريد الإلكتروني
-</label>
-
-<input
-id="email"
-type="email"
-placeholder="admin@familya.com">
-
-<label>
-كلمة المرور
-</label>
-
-<input
-id="password"
-type="password"
-placeholder="123456">
+<input id="password" type="password" placeholder="123456"><br><br>
 
 <button onclick="login()">
 تسجيل الدخول
 </button>
 
-<div
-id="error"
-class="error
+<script>
+
+function login(){
+
+alert("✅ الزر يعمل");
+
+window.location.href =
+"dashboard.html";
+
+}
+
+</script>
+
+</body>
+</html>
