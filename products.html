@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>إدارة المنتجات</title>
 
 <style>
@@ -20,7 +21,7 @@ padding:12px;
 }
 
 .header{
-background:white;
+background:#fff;
 padding:18px;
 border-radius:16px;
 margin-bottom:12px;
@@ -29,7 +30,7 @@ text-align:center;
 }
 
 .card{
-background:white;
+background:#fff;
 padding:16px;
 border-radius:16px;
 margin-bottom:12px;
@@ -44,7 +45,6 @@ margin-bottom:10px;
 border:1px solid #ddd;
 border-radius:12px;
 font-size:16px;
-background:white;
 }
 
 button{
@@ -73,6 +73,12 @@ background:#9ca3af;
 cursor:not-allowed;
 }
 
+.edit-btn{
+background:#f59e0b;
+color:white;
+margin-top:10px;
+}
+
 .delete-btn{
 background:#dc2626;
 color:white;
@@ -83,25 +89,19 @@ margin-top:10px;
 text-align:center;
 font-weight:bold;
 margin-top:10px;
+margin-bottom:10px;
 color:#2563eb;
 }
 
 .preview{
 width:100%;
 border-radius:12px;
-margin-bottom:10px;
 display:none;
-}
-
-.empty{
-background:white;
-padding:20px;
-text-align:center;
-border-radius:14px;
+margin-bottom:10px;
 }
 
 .product{
-background:white;
+background:#fff;
 padding:14px;
 border-radius:14px;
 margin-bottom:12px;
@@ -124,8 +124,14 @@ margin-bottom:8px;
 margin-top:6px;
 }
 
-</style>
+.empty{
+background:#fff;
+padding:20px;
+border-radius:14px;
+text-align:center;
+}
 
+</style>
 </head>
 
 <body>
@@ -149,20 +155,26 @@ type="button"
 class="camera-btn"
 onclick="openCamera()">
 
-📷 تصوير المنتج
+📷 اختيار أو تصوير منتج
+
+</button>
+
 <input
 type="file"
 id="cameraInput"
 accept="image/*"
-capture="environment"
 style="display:none">
+
 <img
 id="preview"
 class="preview">
+
 <select id="category">
+
 <option value="">
 اختر الفئة *
 </option>
+
 <option value="معلبات">معلبات</option>
 <option value="حبوب">حبوب</option>
 <option value="بقوليات">بقوليات</option>
@@ -204,12 +216,13 @@ onclick="addProduct()">
 class="counter"
 id="counter">
 
-عدد المنتجات: 0
+عدد المنتجات : 0
 
 </div>
+
 <input
 id="searchBox"
-placeholder="🔍 البحث عن منتج">
+placeholder="🔍 البحث">
 
 <select id="filterCategory">
 
@@ -229,29 +242,26 @@ placeholder="🔍 البحث عن منتج">
 <option value="أخرى">أخرى</option>
 
 </select>
+
 </div>
 
 <div id="productsList"></div>
 
 <script>
-
-let currentImage="";
+  let currentImage = "";
+let editingId = null;
 
 function openCamera(){
 
-document
-.getElementById(
+document.getElementById(
 "cameraInput"
-)
-.click();
+).click();
 
 }
 
-document
-.getElementById(
+document.getElementById(
 "cameraInput"
-)
-.addEventListener(
+).addEventListener(
 "change",
 function(event){
 
@@ -263,9 +273,10 @@ if(!file) return;
 const reader =
 new FileReader();
 
-reader.onload=function(){
+reader.onload =
+function(){
 
-currentImage=
+currentImage =
 reader.result;
 
 const preview =
@@ -288,11 +299,9 @@ reader.readAsDataURL(file);
 function getProducts(){
 
 return JSON.parse(
-
 localStorage.getItem(
 "products"
 )
-
 ) || [];
 
 }
@@ -310,10 +319,33 @@ function validateForm(){
 
 const valid =
 
-document.getElementById("name").value.trim() &&
-document.getElementById("category").value &&
-document.getElementById("quantity").value &&
-document.getElementById("price").value;
+document.getElementById(
+"name"
+).value.trim()
+
+&&
+
+document.getElementById(
+"category"
+).value
+
+&&
+
+document.getElementById(
+"quantity"
+).value
+
+&&
+
+document.getElementById(
+"price"
+).value
+
+&&
+
+document.getElementById(
+"expiry"
+).value;
 
 document.getElementById(
 "addBtn"
@@ -338,7 +370,47 @@ validateForm
 );
 
 });
-let editingId = null;
+
+function clearForm(){
+
+document.getElementById(
+"name"
+).value="";
+
+document.getElementById(
+"category"
+).value="";
+
+document.getElementById(
+"quantity"
+).value="";
+
+document.getElementById(
+"price"
+).value="";
+
+document.getElementById(
+"expiry"
+).value="";
+
+document.getElementById(
+"preview"
+).style.display =
+"none";
+
+currentImage="";
+
+editingId = null;
+
+document.getElementById(
+"addBtn"
+).textContent =
+"➕ إضافة منتج";
+
+validateForm();
+
+}
+
 function addProduct(){
 
 const name =
@@ -370,7 +442,8 @@ if(
 !name ||
 !category ||
 !quantity ||
-!price
+!price ||
+!expiry
 ){
 
 alert(
@@ -381,18 +454,22 @@ return;
 
 }
 
-if(editingId){
-
-if(!confirm("هل ترغب بتحديث المنتج؟")){
-return;
-}
-
 const products =
 getProducts();
 
+if(editingId){
+
+if(
+!confirm(
+"هل تريد تحديث المنتج؟"
+)
+){
+return;
+}
+
 const index =
 products.findIndex(
-p => p.id === editingId
+p=>p.id===editingId
 );
 
 products[index] = {
@@ -415,26 +492,19 @@ image:currentImage
 
 saveProducts(products);
 
-editingId = null;
-
-document.getElementById(
-"addBtn"
-).textContent =
-"➕ إضافة منتج";
+alert(
+"✅ تم تحديث المنتج"
+);
 
 clearForm();
 
 render();
 
-alert(
-"✅ تم تحديث المنتج"
-);
-
 return;
 
 }
 
-const product = {
+products.push({
 
 id:Date.now(),
 
@@ -450,99 +520,34 @@ expiry,
 
 image:currentImage
 
-};
-
-const products =
-getProducts();
-
-products.push(product);
+});
 
 saveProducts(products);
-
-clearForm();
-
-render();
 
 alert(
 "✅ تم إضافة المنتج"
 );
 
-}
-const product = {
-
-id:Date.now(),
-
-name,
-
-category,
-
-quantity,
-
-price,
-
-expiry,
-
-image:currentImage
-
-};
-
-const products =
-getProducts();
-
-products.push(product);
-
-saveProducts(products);
-
 clearForm();
 
 render();
 
 }
 
-function clearForm(){
-
-document.getElementById(
-"name"
-).value="";
-
-document.getElementById(
-"category"
-).value="";
-
-document.getElementById(
-"quantity"
-).value="";
-
-document.getElementById(
-"price"
-).value="";
-
-document.getElementById(
-"expiry"
-).value="";
-
-document.getElementById(
-"preview"
-).style.display =
-"none";
-
-currentImage="";
-
-validateForm();
-
-}
-
 function deleteProduct(id){
 
-if(!confirm("حذف المنتج؟"))
+if(
+!confirm(
+"هل تريد حذف المنتج؟"
+)
+){
 return;
+}
 
 const products =
 
 getProducts().filter(
-
-p => p.id !== id
-
+p=>p.id!==id
 );
 
 saveProducts(products);
@@ -551,98 +556,6 @@ render();
 
 }
 
-function render(){
-
-const products =
-getProducts();
-
-const list =
-document.getElementById(
-"productsList"
-);
-
-document.getElementById(
-"counter"
-).textContent =
-
-"عدد المنتجات: " +
-products.length;
-
-if(products.length===0){
-
-list.innerHTML=
-
-'<div class="empty">لا توجد منتجات</div>';
-
-return;
-
-}
-
-list.innerHTML="";
-
-products.forEach(p=>{
-
-list.innerHTML += `
-
-<div class="product">
-
-${p.image ?
-
-`<img src="${p.image}"
-class="product-image">`
-
-: ""}
-
-<div class="product-name">
-
-📦 ${p.name}
-
-</div>
-
-<div class="line">
-🏷 ${p.category}
-</div>
-
-<div class="line">
-📊 الكمية: ${p.quantity}
-</div>
-
-<div class="line">
-💰 السعر: ${p.price} ريال
-</div>
-
-<div class="line">
-📅 ${p.expiry || "-"}
-</div>
-
-<button
-style="
-background:#f59e0b;
-color:white;
-margin-top:8px;"
-onclick="editProduct(${p.id})">
-
-✏️ تعديل
-
-</button>
-
-<button
-class="delete-btn"
-onclick="deleteProduct(${p.id})">
-
-🗑 حذف
-
-</button>
-
-</div>
-
-`;
-
-});
-
-}
-
-</script>
 function editProduct(id){
 
 const products =
@@ -650,10 +563,12 @@ getProducts();
 
 const product =
 products.find(
-p => p.id === id
+p=>p.id===id
 );
 
 if(!product) return;
+
+editingId = id;
 
 document.getElementById(
 "name"
@@ -698,8 +613,6 @@ preview.style.display =
 
 }
 
-editingId = id;
-
 document.getElementById(
 "addBtn"
 ).textContent =
@@ -713,4 +626,147 @@ behavior:"smooth"
 });
 
 }
-</html>
+
+function render(){
+
+const products =
+getProducts();
+
+const searchTerm =
+
+document.getElementById(
+"searchBox"
+).value.toLowerCase();
+
+const filterCategory =
+
+document.getElementById(
+"filterCategory"
+).value;
+
+const filteredProducts =
+
+products.filter(p=>{
+
+const matchName =
+
+p.name
+.toLowerCase()
+.includes(searchTerm);
+
+const matchCategory =
+
+filterCategory === ""
+
+||
+
+p.category ===
+filterCategory;
+
+return(
+matchName &&
+matchCategory
+);
+
+});
+
+document.getElementById(
+"counter"
+).textContent =
+
+"عدد المنتجات : "
++
+products.length;
+
+const list =
+document.getElementById(
+"productsList"
+);
+
+if(filteredProducts.length===0){
+
+list.innerHTML =
+
+'<div class="empty">لا توجد منتجات</div>';
+
+return;
+
+}
+
+list.innerHTML="";
+
+filteredProducts.forEach(p=>{
+
+list.innerHTML += `
+
+<div class="product">
+
+${p.image ?
+
+`<img
+src="${p.image}"
+class="product-image">`
+
+: ""}
+
+<div class="product-name">
+📦 ${p.name}
+</div>
+
+<div class="line">
+🏷 ${p.category}
+</div>
+
+<div class="line">
+📊 الكمية:
+${p.quantity}
+</div>
+
+<div class="line">
+💰 السعر:
+${p.price} ريال
+</div>
+
+<div class="line">
+📅 ${p.expiry}
+</div>
+
+<button
+class="edit-btn"
+onclick="editProduct(${p.id})">
+
+✏️ تعديل
+
+</button>
+
+<button
+class="delete-btn"
+onclick="deleteProduct(${p.id})">
+
+🗑 حذف
+
+</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+document.getElementById(
+"searchBox"
+).addEventListener(
+"input",
+render
+);
+
+document.getElementById(
+"filterCategory"
+).addEventListener(
+"change",
+render
+);
+
+render();
