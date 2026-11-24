@@ -653,6 +653,8 @@ onclick="deleteProduct(${p.id})">
 });
 
 }
+
+</script>
 function editProduct(id){
 
 const products =
@@ -707,15 +709,20 @@ preview.style.display =
 "block";
 
 }
+
 editingId = id;
 
 document.getElementById(
 "addBtn"
 ).textContent =
 "🔄 تحديث المنتج";
-render();
 
-</script>
+validateForm();
 
-</body>
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
+}
 </html>
