@@ -345,7 +345,7 @@ validateForm
 );
 
 });
-
+let editingId = null;
 function addProduct(){
 
 const name =
@@ -388,6 +388,93 @@ return;
 
 }
 
+if(editingId){
+
+if(!confirm("هل ترغب بتحديث المنتج؟")){
+return;
+}
+
+const products =
+getProducts();
+
+const index =
+products.findIndex(
+p => p.id === editingId
+);
+
+products[index] = {
+
+id:editingId,
+
+name,
+
+category,
+
+quantity,
+
+price,
+
+expiry,
+
+image:currentImage
+
+};
+
+saveProducts(products);
+
+editingId = null;
+
+document.getElementById(
+"addBtn"
+).textContent =
+"➕ إضافة منتج";
+
+clearForm();
+
+render();
+
+alert(
+"✅ تم تحديث المنتج"
+);
+
+return;
+
+}
+
+const product = {
+
+id:Date.now(),
+
+name,
+
+category,
+
+quantity,
+
+price,
+
+expiry,
+
+image:currentImage
+
+};
+
+const products =
+getProducts();
+
+products.push(product);
+
+saveProducts(products);
+
+clearForm();
+
+render();
+
+alert(
+"✅ تم إضافة المنتج"
+);
+
+}
 const product = {
 
 id:Date.now(),
@@ -615,20 +702,12 @@ preview.style.display =
 "block";
 
 }
+editingId = id;
 
-deleteProduct(id);
-
-validateForm();
-
-window.scrollTo({
-
-top:0,
-
-behavior:"smooth"
-
-});
-
-}
+document.getElementById(
+"addBtn"
+).textContent =
+"🔄 تحديث المنتج";
 render();
 
 </script>
