@@ -485,7 +485,7 @@ image:currentImage
 saveProducts(products);
 
 alert(
-"✅ تم تحديث المنتج"
+`✅ تم تعديل المنتج (${name}) بنجاح`
 );
 
 clearForm();
@@ -517,7 +517,7 @@ image:currentImage
 saveProducts(products);
 
 alert(
-"✅ تم إضافة المنتج"
+`✅ تم إضافة المنتج (${name}) بنجاح`
 );
 
 clearForm();
@@ -555,7 +555,7 @@ getProducts();
 
 const product =
 products.find(
-p=>p.id===id
+p => p.id === id
 );
 
 if(!product) return;
@@ -585,23 +585,28 @@ product.price;
 document.getElementById(
 "expiry"
 ).value =
-product.expiry;
+product.expiry || "";
 
 currentImage =
 product.image || "";
-
-if(currentImage){
 
 const preview =
 document.getElementById(
 "preview"
 );
 
+if(currentImage){
+
 preview.src =
 currentImage;
 
 preview.style.display =
 "block";
+
+}else{
+
+preview.style.display =
+"none";
 
 }
 
