@@ -412,7 +412,6 @@ validateForm();
 }
 
 function addProduct(){
-alert("وصلت لدالة الإضافة");
 const name =
 document.getElementById(
 "name"
@@ -442,23 +441,16 @@ if(
 !name ||
 !category ||
 !quantity ||
-!price ||
-!expiry
+!price
 ){
-
 alert(
 "أكمل الحقول المطلوبة"
 );
-
 return;
-
 }
-
 const products =
 getProducts();
-
 if(editingId){
-
 if(
 !confirm(
 "هل تريد تحديث المنتج؟"
