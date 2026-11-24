@@ -85,12 +85,6 @@ button:active {
   color: white;
 }
 
-/* لم يعد معطلاً، لكن يمكن أن يبدو باهتاً إذا أردت */
-.add-btn:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-}
-
 .edit-btn {
   background: #f59e0b;
   color: white;
@@ -236,17 +230,48 @@ function openCamera() {
   document.getElementById("cameraInput").click();
 }
 
-document.getElementById("cameraInput").addEventListener("change", function(event) {
+// ضغط الصورة
+function compressImage(file, maxWidth, maxHeight, quality) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round(height * maxWidth / width);
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = Math.round(width * maxHeight / height);
+          height = maxHeight;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("cameraInput").addEventListener("change", async function(event) {
   const file = event.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function() {
-    currentImage = reader.result;
-    const preview = document.getElementById("preview");
-    preview.src = reader.result;
-    preview.style.display = "block";
-  };
-  reader.readAsDataURL(file);
+
+  const compressed = await compressImage(file, 600, 600, 0.7);
+  currentImage = compressed;
+
+  const preview = document.getElementById("preview");
+  preview.src = compressed;
+  preview.style.display = "block";
 });
 
 function getProducts() {
@@ -276,7 +301,6 @@ function addProduct() {
   const price = document.getElementById("price").value;
   const expiry = document.getElementById("expiry").value;
 
-  // التحقق من الحقول المطلوبة
   if (!name || !category || !quantity || !price) {
     alert("أكمل الحقول المطلوبة");
     return;
@@ -289,44 +313,49 @@ function addProduct() {
 
   const products = getProducts();
 
-  if (editingId) {
-    if (!confirm("هل تريد تحديث المنتج؟")) return;
-    const index = products.findIndex(p => p.id === editingId);
-    if (index === -1) {
-      alert("المنتج غير موجود، ربما تم حذفه.");
+  try {
+    if (editingId) {
+      if (!confirm("هل تريد تحديث المنتج؟")) return;
+      const index = products.findIndex(p => p.id === editingId);
+      if (index === -1) {
+        alert("المنتج غير موجود، ربما تم حذفه.");
+        clearForm();
+        render();
+        return;
+      }
+      products[index] = {
+        id: editingId,
+        name,
+        category,
+        quantity,
+        price,
+        expiry,
+        image: currentImage
+      };
+      saveProducts(products);
+      alert(`✅ تم تعديل المنتج (${name}) بنجاح`);
       clearForm();
       render();
       return;
     }
-    products[index] = {
-      id: editingId,
+
+    products.push({
+      id: Date.now(),
       name,
       category,
       quantity,
       price,
       expiry,
       image: currentImage
-    };
+    });
     saveProducts(products);
-    alert(`✅ تم تعديل المنتج (${name}) بنجاح`);
+    alert(`✅ تم إضافة المنتج (${name}) بنجاح`);
     clearForm();
     render();
-    return;
+  } catch (e) {
+    alert("❌ حدث خطأ أثناء الحفظ. قد تكون مساحة التخزين ممتلئة. حاول حذف بعض المنتجات القديمة.");
+    console.error(e);
   }
-
-  products.push({
-    id: Date.now(),
-    name,
-    category,
-    quantity,
-    price,
-    expiry,
-    image: currentImage
-  });
-  saveProducts(products);
-  alert(`✅ تم إضافة المنتج (${name}) بنجاح`);
-  clearForm();
-  render();
 }
 
 function deleteProduct(id) {
