@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>ادارة مخزون البيت  (Supabase)</title>
+<title>إدارة المنتجات (Supabase)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; }
   body { background: #f3f4f6; padding: 10px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); font-size: 15px; }
   
+  /* تنسيقات مشتركة */
   .header { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); display: flex; justify-content: space-between; align-items: center; }
   .header h2 { font-size: 18px; margin: 0; }
-  .refresh-btn { background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; width: auto; height: auto; margin: 0; transition: background 0.2s; }
-  .refresh-btn:active { background: #2563eb; }
-  .refresh-btn:disabled { background: #9ca3af; cursor: wait; }
-
+  .btn-icon { background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; width: auto; height: auto; margin: 0; }
+  .btn-gray { background: #64748b; }
+  
   .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
   .stat-card { background: #fff; padding: 12px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.06); text-align: center; }
   .stat-card .title { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
@@ -42,44 +42,82 @@
   .suggestion-item:hover { background: #f0fdf4; color: #16a34a; }
   .suggestion-item:last-child { border-bottom: none; }
 
-  /* تنسيقات إدارة الفئات */
-  .cat-manager { display: none; margin-bottom: 10px; background: #fff; padding: 14px; border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+  /* إعدادات الصفحات */
+  #settingsPage { display: none; }
+  .settings-group { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+  .settings-group h3 { font-size: 16px; color: #1f2937; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+  
   .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
   .cat-item:last-child { border-bottom: none; }
   .cat-del-btn { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; width: auto; height: auto; margin: 0; font-size: 12px; }
-  .btn-toggle-cat { background: #64748b; color: white; width: 100%; height: 40px; margin-bottom: 8px; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h2>📦ادارة مخزن البيت </h2>
-  <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 تحديث</button>
+<!-- ================= الصفحة الرئيسية ================= -->
+<div id="mainPage">
+  <div class="header">
+    <h2>📦 إدارة المنتجات</h2>
+    <div style="display:flex; gap:5px;">
+      <button class="btn-icon" id="refreshBtn" onclick="manualRefresh()">🔄</button>
+      <button class="btn-icon btn-gray" onclick="toggleSettings()">⚙️</button>
+    </div>
+  </div>
+
+  <div class="stats-container">
+    <div class="stat-card total">
+      <div class="title">إجمالي المنتجات</div>
+      <div class="value" id="statTotal">0</div>
+    </div>
+    <div class="stat-card value-total">
+      <div class="title">قيمة المخزون</div>
+      <div class="value" id="statValue">0</div>
+    </div>
+    <div class="stat-card expiring">
+      <div class="title">تنتهي قريباً</div>
+      <div class="value" id="statExpiring">0</div>
+    </div>
+    <div class="stat-card out-of-stock">
+      <div class="title">نفدت الكمية</div>
+      <div class="value" id="statOut">0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="position: relative; margin-bottom: 8px;">
+      <input id="name" placeholder="اسم المنتج *" autocomplete="off" 
+             onfocus="showSuggestions()" oninput="showSuggestions()" onblur="setTimeout(hideSuggestions, 200)" 
+             style="margin-bottom:0; width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; background:#fafafa;">
+      <div id="suggestionsBox" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:10px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+    </div>
+
+    <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">📷 اختيار صورة</button>
+    <input type="file" id="cameraInput" accept="image/*" style="display:none">
+    <img id="preview" class="preview">
+    
+    <select id="category">
+      <option value="">اختر الفئة *</option>
+    </select>
+    
+    <input id="quantity" type="number" placeholder="الكمية *" min="0">
+    <input id="price" type="number" placeholder="السعر *" min="0">
+    <input id="expiry" type="date">
+    <button id="addBtn" class="add-btn" onclick="addProduct()">➕ إضافة منتج</button>
+  </div>
+
+  <div id="productsList"></div>
 </div>
 
-<div class="stats-container" id="statsContainer">
-  <div class="stat-card total">
-    <div class="title">إجمالي المنتجات</div>
-    <div class="value" id="statTotal">0</div>
+<!-- ================= صفحة الإعدادات ================= -->
+<div id="settingsPage">
+  <div class="header">
+    <h2>⚙️ إعدادات النظام</h2>
+    <button class="btn-icon btn-gray" onclick="toggleSettings()">🔙 رجوع</button>
   </div>
-  <div class="stat-card value-total">
-    <div class="title">قيمة المخزون</div>
-    <div class="value" id="statValue">0</div>
-  </div>
-  <div class="stat-card expiring">
-    <div class="title">تنتهي قريباً (30 يوم)</div>
-    <div class="value" id="statExpiring">0</div>
-  </div>
-  <div class="stat-card out-of-stock">
-    <div class="title">نفدت الكمية</div>
-    <div class="value" id="statOut">0</div>
-  </div>
-</div>
 
-<div class="card">
-  <button type="button" class="btn-toggle-cat" onclick="toggleCatManager()">⚙️ إدارة الأصناف (الفئات)</button>
-
-  <div class="cat-manager" id="catManager">
+  <!-- إدارة الأصناف -->
+  <div class="settings-group">
+    <h3>🏷️ إدارة الفئات (الأصناف)</h3>
     <div style="display:flex; gap:5px; margin-bottom:10px;">
       <input type="text" id="newCatName" placeholder="اسم الصنف الجديد..." style="margin-bottom:0;">
       <button onclick="addCategory()" style="background:#16a34a; color:white; width:80px; height:auto; margin:0; font-size:14px;">إضافة</button>
@@ -87,29 +125,24 @@
     <div id="catList"></div>
   </div>
 
-  <div style="position: relative; margin-bottom: 8px;">
-    <input id="name" placeholder="اسم المنتج *" autocomplete="off" 
-           onfocus="showSuggestions()" oninput="showSuggestions()" onblur="setTimeout(hideSuggestions, 200)" 
-           style="margin-bottom:0; width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; background:#fafafa;">
-    <div id="suggestionsBox" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:10px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+  <!-- إعدادات اللغة والعملة -->
+  <div class="settings-group">
+    <h3>🌐 إعدادات اللغة والعملة</h3>
+    <label style="font-size:14px; margin-bottom:5px; display:block; color:#6b7280;">اللغة (قريباً)</label>
+    <select disabled>
+      <option>العربية</option>
+      <option>English</option>
+    </select>
+    
+    <label style="font-size:14px; margin-bottom:5px; display:block; color:#6b7280; margin-top:10px;">العملة الافتراضية</label>
+    <select id="currencySelect" onchange="saveCurrency()">
+      <option value="ر.س">ريال سعودي (ر.س)</option>
+      <option value="د.إ">درهم إماراتي (د.إ)</option>
+      <option value="$">دولار أمريكي ($)</option>
+      <option value="ج.م">جنيه مصري (ج.م)</option>
+    </select>
   </div>
-
-  <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">📷 اختيار صورة</button>
-  <input type="file" id="cameraInput" accept="image/*" style="display:none">
-  <img id="preview" class="preview">
-  
-  <select id="category">
-    <option value="">اختر الفئة *</option>
-    <!-- سيتم تعبئتها ديناميكياً -->
-  </select>
-  
-  <input id="quantity" type="number" placeholder="الكمية *" min="0">
-  <input id="price" type="number" placeholder="السعر *" min="0">
-  <input id="expiry" type="date">
-  <button id="addBtn" class="add-btn" onclick="addProduct()">➕ إضافة منتج</button>
 </div>
-
-<div id="productsList"></div>
 
 <script>
 // ================== إعدادات Supabase ==================
@@ -125,6 +158,22 @@ let currentImageFile = null;
 let editingId = null;
 let allProductNames = [];
 let allCategories = [];
+let currentCurrency = localStorage.getItem('currency') || 'ر.س'; // حفظ العملة في الجهاز
+
+// ================== التبديل بين الصفحات ==================
+function toggleSettings() {
+  const main = document.getElementById('mainPage');
+  const settings = document.getElementById('settingsPage');
+  if (main.style.display === 'none') {
+    main.style.display = 'block';
+    settings.style.display = 'none';
+    loadProducts(); // تحديث المنتجات عند العودة
+  } else {
+    main.style.display = 'none';
+    settings.style.display = 'block';
+    loadCategories(); // تحديث الأصناف عند فتح الإعدادات
+  }
+}
 
 // ================== دوال مساعدة ==================
 function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -149,36 +198,46 @@ function compressImage(file, maxW = 600, maxH = 600, quality = 0.7) {
   });
 }
 
-// ================== إدارة الفئات (الأصناف) ==================
-function toggleCatManager() {
-  const manager = document.getElementById('catManager');
-  manager.style.display = manager.style.display === 'block' ? 'none' : 'block';
+// ================== إعدادات العملة ==================
+function initCurrency() {
+  const select = document.getElementById('currencySelect');
+  if (select) select.value = currentCurrency;
+}
+function saveCurrency() {
+  currentCurrency = document.getElementById('currencySelect').value;
+  localStorage.setItem('currency', currentCurrency);
+  alert('تم حفظ العملة بنجاح');
+  // تحديث القائمة لعرض الأسعار بالعملة الجديدة
+  loadProducts();
 }
 
+// ================== إدارة الفئات (الأصناف) ==================
 async function loadCategories() {
   const { data, error } = await _supabase.from('categories').select('*').order('id', { ascending: true });
   if (error) { console.error('خطأ في جلب الفئات:', error); return; }
   
   allCategories = data || [];
   
-  // تعبئة قائمة الاختيار في النموذج
   const select = document.getElementById('category');
-  const currentVal = select.value;
-  select.innerHTML = '<option value="">اختر الفئة *</option>' + 
-    allCategories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
-  select.value = currentVal; // الحفاظ على القيمة المختارة إن وجدت
+  if (select) {
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">اختر الفئة *</option>' + 
+      allCategories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+    select.value = currentVal;
+  }
 
-  // تعبئة قائمة إدارة الفئات في الإعدادات
   const catList = document.getElementById('catList');
-  if (allCategories.length === 0) {
-    catList.innerHTML = '<div class="empty" style="padding:10px; font-size:14px;">لا توجد أصناف</div>';
-  } else {
-    catList.innerHTML = allCategories.map(c => `
-      <div class="cat-item">
-        <span>${esc(c.name)}</span>
-        <button class="cat-del-btn" onclick="deleteCategory(${c.id})">حذف</button>
-      </div>
-    `).join('');
+  if (catList) {
+    if (allCategories.length === 0) {
+      catList.innerHTML = '<div class="empty" style="padding:10px; font-size:14px;">لا توجد أصناف</div>';
+    } else {
+      catList.innerHTML = allCategories.map(c => `
+        <div class="cat-item">
+          <span>${esc(c.name)}</span>
+          <button class="cat-del-btn" onclick="deleteCategory(${c.id})">حذف</button>
+        </div>
+      `).join('');
+    }
   }
 }
 
@@ -195,7 +254,7 @@ async function addCategory() {
     alert('خطأ: ' + (error.code === '23505' ? 'هذا الصنف موجود مسبقاً' : error.message));
   } else {
     document.getElementById('newCatName').value = '';
-    await loadCategories(); // تحديث القائمة
+    await loadCategories();
   }
   
   btn.disabled = false;
@@ -203,7 +262,7 @@ async function addCategory() {
 }
 
 async function deleteCategory(id) {
-  if (!confirm('هل تريد حذف هذا الصنف؟ (لن يؤثر على المسجلة مسبقاً)')) return;
+  if (!confirm('هل تريد حذف هذا الصنف؟')) return;
   const { error } = await _supabase.from('categories').delete().eq('id', id);
   if (error) { alert('فشل الحذف'); return; }
   await loadCategories();
@@ -237,7 +296,7 @@ async function uploadImage(file) {
   return urlData.publicUrl;
 }
 
-// ==================ادارة نخزون البيت ==================
+// ================== إدارة المنتجات ==================
 document.getElementById('cameraInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -300,14 +359,15 @@ function resetForm() {
 async function manualRefresh() {
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ جاري التحديث...';
+  btn.textContent = '⏳';
   await Promise.all([loadCategories(), loadProducts()]);
   btn.disabled = false;
-  btn.textContent = '🔄 تحديث';
+  btn.textContent = '🔄';
 }
 
 async function loadProducts() {
   const list = document.getElementById('productsList');
+  if (!list) return;
   list.innerHTML = '<div class="empty">جاري التحميل...</div>';
 
   const { data: products, error } = await _supabase.from('products').select('*').order('created_at', { ascending: false });
@@ -325,7 +385,7 @@ async function loadProducts() {
       <div class="product-name">📦 ${esc(p.name)}</div>
       <div class="line">🏷 ${esc(p.category)}</div>
       <div class="line">📊 الكمية: ${esc(p.quantity)}</div>
-      <div class="line">💰 السعر: ${esc(p.price)} ريال</div>
+      <div class="line">💰 السعر: ${esc(p.price)} ${currentCurrency}</div>
       ${p.expiry ? `<div class="line">📅 ${esc(p.expiry)}</div>` : ''}
       <button class="edit-btn" onclick="editProduct(${p.id})">✏️ تعديل</button>
       <button class="delete-btn" onclick="deleteProduct(${p.id})">🗑 حذف</button>
@@ -356,10 +416,17 @@ function updateStats(products) {
     }
   });
 
-  document.getElementById('statTotal').textContent = totalItems;
-  document.getElementById('statValue').textContent = totalValue.toLocaleString('en-US') + ' ر.س';
-  document.getElementById('statExpiring').textContent = expiringSoon;
-  document.getElementById('statOut').textContent = outOfStock;
+  const elTotal = document.getElementById('statTotal');
+  if (elTotal) elTotal.textContent = totalItems;
+  
+  const elValue = document.getElementById('statValue');
+  if (elValue) elValue.textContent = totalValue.toLocaleString('en-US') + ' ' + currentCurrency;
+  
+  const elExpiring = document.getElementById('statExpiring');
+  if (elExpiring) elExpiring.textContent = expiringSoon;
+  
+  const elOut = document.getElementById('statOut');
+  if (elOut) elOut.textContent = outOfStock;
 }
 
 async function editProduct(id) {
@@ -391,6 +458,7 @@ async function deleteProduct(id) {
 }
 
 // التشغيل الأولي
+initCurrency();
 loadCategories();
 loadProducts();
 </script>
