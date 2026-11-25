@@ -30,7 +30,6 @@
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s, color 0.3s; }
   body { background: var(--bg-color); color: var(--text-color); padding: 10px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); font-size: 15px; }
   
-  /* تنسيقات مشتركة */
   .header { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center; }
   .header h2 { font-size: 18px; margin: 0; }
   .btn-icon { background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; width: auto; height: auto; margin: 0; }
@@ -44,6 +43,15 @@
   .stat-card.value-total .value { color: #16a34a; }
   .stat-card.expiring .value { color: #f59e0b; }
   .stat-card.out-of-stock .value { color: #dc2626; }
+
+  /* تنسيقات تقرير الصلاحية */
+  .expiry-report { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); display: none; }
+  .expiry-report h3 { font-size: 16px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; color: #f59e0b; }
+  .expiry-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+  .expiry-item:last-child { border-bottom: none; }
+  .expiry-item.expired { color: #dc2626; background: rgba(220, 38, 38, 0.05); border-radius: 6px; }
+  .expiry-item .name { font-weight: bold; }
+  .expiry-item .date { font-size: 12px; color: var(--text-muted); }
 
   .card { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
   input, select { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--input-bg); color: var(--text-color); }
@@ -63,7 +71,6 @@
   .suggestion-item:hover { background: #2563eb; color: white; }
   .suggestion-item:last-child { border-bottom: none; }
 
-  /* إعدادات الصفحات */
   #settingsPage { display: none; }
   .settings-group { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
   .settings-group h3 { font-size: 16px; color: var(--text-color); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
@@ -73,7 +80,6 @@
   .cat-item span { color: var(--text-color); }
   .cat-del-btn { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; width: auto; height: auto; margin: 0; font-size: 12px; }
 
-  /* زر التبديل بين الوضع الداكن والفاتح */
   .theme-switch { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--input-bg); border-radius: 10px; cursor: pointer; border: 1px solid var(--border-color); }
   .theme-switch span { font-size: 15px; font-weight: bold; }
   .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
@@ -86,7 +92,6 @@
 </head>
 <body>
 
-<!-- ================= الصفحة الرئيسية ================= -->
 <div id="mainPage">
   <div class="header">
     <h2>📦 إدارة المنتجات</h2>
@@ -115,6 +120,12 @@
     </div>
   </div>
 
+  <!-- تقرير الصلاحية -->
+  <div class="expiry-report" id="expiryReport">
+    <h3>⚠️ تنبيهات الصلاحية</h3>
+    <div id="expiryList"></div>
+  </div>
+
   <div class="card">
     <div style="position: relative; margin-bottom: 8px;">
       <input id="name" placeholder="اسم المنتج *" autocomplete="off" 
@@ -140,14 +151,12 @@
   <div id="productsList"></div>
 </div>
 
-<!-- ================= صفحة الإعدادات ================= -->
 <div id="settingsPage">
   <div class="header">
     <h2>⚙️ إعدادات النظام</h2>
     <button class="btn-icon btn-gray" onclick="toggleSettings()">🔙 رجوع</button>
   </div>
 
-  <!-- الوضع الداكن والفاتح -->
   <div class="settings-group">
     <h3>🎨 المظهر</h3>
     <div class="theme-switch" onclick="toggleTheme()">
@@ -159,7 +168,6 @@
     </div>
   </div>
 
-  <!-- إدارة الأصناف -->
   <div class="settings-group">
     <h3>🏷️ إدارة الفئات (الأصناف)</h3>
     <div style="display:flex; gap:5px; margin-bottom:10px;">
@@ -173,7 +181,7 @@
 <script>
 // ================== إعدادات Supabase ==================
 const SUPABASE_URL = 'https://dqidszdrsmozozxatzlz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'; 
+const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'
 const BUCKET_NAME = 'product-images';
 
 const { createClient } = supabase;
@@ -184,6 +192,8 @@ let currentImageFile = null;
 let editingId = null;
 let allProductNames = [];
 let allCategories = [];
+let allProductsData = []; // لحفظ بيانات المنتجات لاستخدامها في التقرير
+let showAllExpiry = false; // للتحكم في عرض تقرير الصلاحية
 
 // ================== إعدادات الوضع الداكن والفاتح ==================
 function initTheme() {
@@ -410,9 +420,13 @@ async function loadProducts() {
   const { data: products, error } = await _supabase.from('products').select('*').order('created_at', { ascending: false });
 
   if (error) { list.innerHTML = '<div class="empty">خطأ في تحميل المنتجات: ' + error.message + '</div>'; return; }
+  
+  allProductsData = products || []; // تخزين البيانات لاستخدامها في التقرير
+
   if (!products || products.length === 0) {
     list.innerHTML = '<div class="empty">لا توجد منتجات</div>';
     updateStats([]);
+    updateExpiryReport([]);
     return;
   }
 
@@ -422,7 +436,7 @@ async function loadProducts() {
       <div class="product-name">📦 ${esc(p.name)}</div>
       <div class="line">🏷 ${esc(p.category)}</div>
       <div class="line">📊 الكمية: ${esc(p.quantity)}</div>
-      <div class="line">💰 السعر: ${esc(p.price)} ر.س</div>
+      <div class="line">💰 السعر: ${esc(p.price)} ريال</div>
       ${p.expiry ? `<div class="line">📅 ${esc(p.expiry)}</div>` : ''}
       <button class="edit-btn" onclick="editProduct(${p.id})">✏️ تعديل</button>
       <button class="delete-btn" onclick="deleteProduct(${p.id})">🗑 حذف</button>
@@ -431,6 +445,7 @@ async function loadProducts() {
 
   allProductNames = [...new Set(products.map(p => p.name))];
   updateStats(products);
+  updateExpiryReport(products);
 }
 
 function updateStats(products) {
@@ -457,13 +472,75 @@ function updateStats(products) {
   if (elTotal) elTotal.textContent = totalItems;
   
   const elValue = document.getElementById('statValue');
-  if (elValue) elValue.textContent = totalValue.toLocaleString('en-US') + ' ر.س';
+  if (elValue) elValue.textContent = totalValue.toLocaleString('en-US') + ' ريال';
   
   const elExpiring = document.getElementById('statExpiring');
   if (elExpiring) elExpiring.textContent = expiringSoon;
   
   const elOut = document.getElementById('statOut');
   if (elOut) elOut.textContent = outOfStock;
+}
+
+// ================== تقرير الصلاحية ==================
+function updateExpiryReport(products) {
+  const reportDiv = document.getElementById('expiryReport');
+  const listDiv = document.getElementById('expiryList');
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const nextMonth = new Date();
+  nextMonth.setDate(today.getDate() + 30);
+
+  let criticalProducts = products.filter(p => {
+    if (!p.expiry) return false;
+    const expDate = new Date(p.expiry);
+    return expDate <= nextMonth;
+  });
+
+  criticalProducts.sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
+
+  if (criticalProducts.length === 0) {
+    reportDiv.style.display = 'none';
+    showAllExpiry = false;
+    return;
+  }
+
+  reportDiv.style.display = 'block';
+  
+  const displayLimit = showAllExpiry ? criticalProducts.length : 5;
+  const itemsToShow = criticalProducts.slice(0, displayLimit);
+
+  listDiv.innerHTML = itemsToShow.map(p => {
+    const expDate = new Date(p.expiry);
+    const isExpired = expDate < today;
+    
+    let dateStr = expDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric', year: 'numeric' });
+    let statusText = isExpired ? ' (منتهي)' : '';
+    
+    return `
+      <div class="expiry-item ${isExpired ? 'expired' : ''}">
+        <span class="name">${esc(p.name)}</span>
+        <span class="date">${dateStr}${statusText}</span>
+      </div>
+    `;
+  }).join('');
+
+  if (criticalProducts.length > 5) {
+    const btnText = showAllExpiry ? 'إخفاء الباقي' : `عرض الكل (${criticalProducts.length} صنف)`;
+    listDiv.innerHTML += `
+      <div style="text-align:center; margin-top:10px;">
+        <button onclick="toggleExpiryView()" style="background:transparent; border:none; color:#3b82f6; font-weight:bold; cursor:pointer; font-size:14px; width:auto; height:auto; padding:5px; margin:0;">
+          ${btnText}
+        </button>
+      </div>
+    `;
+  }
+}
+
+function toggleExpiryView() {
+  showAllExpiry = !showAllExpiry;
+  updateExpiryReport(allProductsData); // استخدام البيانات المخزنة بدلاً من جلبها مجدداً
 }
 
 async function editProduct(id) {
