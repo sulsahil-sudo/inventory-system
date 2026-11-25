@@ -23,6 +23,18 @@
   .product-name { font-size: 16px; font-weight: bold; margin-bottom: 6px; word-break: break-word; }
   .line { margin-top: 4px; font-size: 14px; color: #374151; }
   .empty { background: #fff; padding: 20px; border-radius: 12px; text-align: center; color: #6b7280; }
+  
+  /* تنسيقات القائمة المنسدلة المخصصة */
+  .suggestion-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    font-size: 15px;
+    background: #fff;
+    transition: background 0.2s;
+  }
+  .suggestion-item:hover { background: #f0fdf4; color: #16a34a; }
+  .suggestion-item:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -30,9 +42,15 @@
 <div class="header"><h2>📦 إدارة المنتجات</h2></div>
 
 <div class="card">
-  <!-- تم إضافة list="productNames" هنا -->
-  <input id="name" placeholder="اسم المنتج *" list="productNames" autocomplete="off">
-  <datalist id="productNames"></datalist>
+  <!-- حقل الاسم مع القائمة المنسدلة المخصصة -->
+  <div style="position: relative; margin-bottom: 8px;">
+    <input id="name" placeholder="اسم المنتج *" autocomplete="off" 
+           onfocus="showSuggestions()" 
+           oninput="showSuggestions()" 
+           onblur="setTimeout(hideSuggestions, 200)" 
+           style="margin-bottom:0; width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; background:#fafafa;">
+    <div id="suggestionsBox" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:10px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+  </div>
 
   <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">📷 اختيار صورة</button>
   <input type="file" id="cameraInput" accept="image/*" style="display:none">
@@ -55,7 +73,6 @@
 
 <script>
 // ================== إعدادات Supabase ==================
-// ⚠️ استبدل المفتاح بالمفتاح الخاص بك
 const SUPABASE_URL = 'https://dqidszdrsmozozxatzlz.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'
 const BUCKET_NAME = 'product-images';
@@ -66,6 +83,7 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ================== المتغيرات ==================
 let currentImageFile = null;
 let editingId = null;
+let allProductNames = []; // لتخزين أسماء المنتجات للاقتراحات
 
 // ================== دوال مساعدة ==================
 function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -89,6 +107,34 @@ function compressImage(file, maxW = 600, maxH = 600, quality = 0.7) {
     };
     reader.readAsDataURL(file);
   });
+}
+
+// ================== دوال الاقتراحات ==================
+function showSuggestions() {
+  const input = document.getElementById('name').value.trim().toLowerCase();
+  const box = document.getElementById('suggestionsBox');
+  
+  // إذا كان الحقل فارغاً، اعرض كل الأسماء
+  let filtered = allProductNames;
+  if (input !== "") {
+    filtered = allProductNames.filter(name => name.toLowerCase().includes(input));
+  }
+  
+  if (filtered.length === 0) { box.style.display = 'none'; return; }
+  
+  box.innerHTML = filtered.map(name => 
+    `<div class="suggestion-item" onmousedown="selectSuggestion('${esc(name)}')">${esc(name)}</div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function selectSuggestion(name) {
+  document.getElementById('name').value = name;
+  document.getElementById('suggestionsBox').style.display = 'none';
+}
+
+function hideSuggestions() {
+  document.getElementById('suggestionsBox').style.display = 'none';
 }
 
 // ================== رفع الصورة إلى Supabase Storage ==================
@@ -210,16 +256,8 @@ async function loadProducts() {
     </div>
   `).join('');
 
-  // ✅ إضافة أسماء المنتجات إلى القائمة المنسدلة للاقتراحات
-  const datalist = document.getElementById('productNames');
-  datalist.innerHTML = '';
-  // نستخدم Set لضمان عدم تكرار الأسماء
-  const uniqueNames = [...new Set(products.map(p => p.name))];
-  uniqueNames.forEach(name => {
-    const option = document.createElement('option');
-    option.value = name;
-    datalist.appendChild(option);
-  });
+  // ✅ حفظ جميع أسماء المنتجات للاقتراحات (بدون تكرار)
+  allProductNames = [...new Set(products.map(p => p.name))];
 }
 
 async function editProduct(id) {
