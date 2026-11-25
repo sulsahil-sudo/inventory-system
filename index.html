@@ -30,16 +30,21 @@
 <div class="header"><h2>📦 إدارة المنتجات</h2></div>
 
 <div class="card">
-  <input id="name" placeholder="اسم المنتج *">
+  <!-- تم إضافة list="productNames" هنا -->
+  <input id="name" placeholder="اسم المنتج *" list="productNames" autocomplete="off">
+  <datalist id="productNames"></datalist>
+
   <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">📷 اختيار صورة</button>
   <input type="file" id="cameraInput" accept="image/*" style="display:none">
   <img id="preview" class="preview">
+  
   <select id="category">
     <option value="">اختر الفئة *</option>
     <option value="معلبات">معلبات</option>
     <option value="حبوب">حبوب</option>
     <option value="أخرى">أخرى</option>
   </select>
+  
   <input id="quantity" type="number" placeholder="الكمية *" min="0">
   <input id="price" type="number" placeholder="السعر *" min="0">
   <input id="expiry" type="date">
@@ -50,9 +55,9 @@
 
 <script>
 // ================== إعدادات Supabase ==================
-// ⚠️ استبدل القيم التالية بقيم مشروعك
+// ⚠️ استبدل المفتاح بالمفتاح الخاص بك
 const SUPABASE_URL = 'https://dqidszdrsmozozxatzlz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'; // المفتاح الجديد بعد إعادة التوليد
+const SUPABASE_ANON_KEY = 'ضع_المفتاح_هنا'; // ⬅️ ضع المفتاح الخاص بك هنا
 const BUCKET_NAME = 'product-images';
 
 const { createClient } = supabase;
@@ -65,7 +70,7 @@ let editingId = null;
 // ================== دوال مساعدة ==================
 function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// ضغط الصورة (ضروري جداً لتقليل حجم الرفع والاستهلاك)
+// ضغط الصورة
 function compressImage(file, maxW = 600, maxH = 600, quality = 0.7) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -93,7 +98,7 @@ async function uploadImage(file) {
   
   const { data, error } = await _supabase.storage
     .from(BUCKET_NAME)
-    .upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+    .upload(fileName, compressedBlob, { contentType: 'image/jpeg', upsert: true });
 
   if (error) throw new Error('فشل رفع الصورة: ' + error.message);
 
@@ -191,6 +196,7 @@ async function loadProducts() {
     return;
   }
 
+  // عرض المنتجات
   list.innerHTML = products.map(p => `
     <div class="product">
       ${p.image_url ? `<img src="${p.image_url}" class="product-image" loading="lazy">` : ''}
@@ -203,6 +209,17 @@ async function loadProducts() {
       <button class="delete-btn" onclick="deleteProduct(${p.id})">🗑 حذف</button>
     </div>
   `).join('');
+
+  // ✅ إضافة أسماء المنتجات إلى القائمة المنسدلة للاقتراحات
+  const datalist = document.getElementById('productNames');
+  datalist.innerHTML = '';
+  // نستخدم Set لضمان عدم تكرار الأسماء
+  const uniqueNames = [...new Set(products.map(p => p.name))];
+  uniqueNames.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    datalist.appendChild(option);
+  });
 }
 
 async function editProduct(id) {
