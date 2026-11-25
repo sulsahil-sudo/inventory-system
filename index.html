@@ -6,50 +6,82 @@
 <title>إدارة المنتجات (Supabase)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; font-family: Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; }
-  body { background: #f3f4f6; padding: 10px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); font-size: 15px; }
+  /* ================== المتغيرات (للوضع الفاتح والداكن) ================== */
+  :root {
+    --bg-color: #f3f4f6;
+    --card-bg: #ffffff;
+    --text-color: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #ddd;
+    --input-bg: #fafafa;
+    --shadow: 0 2px 6px rgba(0,0,0,.06);
+  }
+
+  body.dark-mode {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --text-color: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+    --input-bg: #0f172a;
+    --shadow: 0 2px 6px rgba(0,0,0,.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s, color 0.3s; }
+  body { background: var(--bg-color); color: var(--text-color); padding: 10px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); font-size: 15px; }
   
   /* تنسيقات مشتركة */
-  .header { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); display: flex; justify-content: space-between; align-items: center; }
+  .header { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center; }
   .header h2 { font-size: 18px; margin: 0; }
   .btn-icon { background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; width: auto; height: auto; margin: 0; }
   .btn-gray { background: #64748b; }
   
   .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-  .stat-card { background: #fff; padding: 12px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.06); text-align: center; }
-  .stat-card .title { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
-  .stat-card .value { font-size: 18px; font-weight: bold; color: #1f2937; }
+  .stat-card { background: var(--card-bg); padding: 12px; border-radius: 12px; box-shadow: var(--shadow); text-align: center; }
+  .stat-card .title { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-card .value { font-size: 18px; font-weight: bold; color: var(--text-color); }
   .stat-card.total .value { color: #2563eb; }
   .stat-card.value-total .value { color: #16a34a; }
   .stat-card.expiring .value { color: #f59e0b; }
   .stat-card.out-of-stock .value { color: #dc2626; }
 
-  .card { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
-  input, select { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; background: #fafafa; }
+  .card { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  input, select { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 15px; background: var(--input-bg); color: var(--text-color); }
   button { width: 100%; height: 48px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
   .camera-btn { background: #2563eb; color: white; }
   .add-btn { background: #16a34a; color: white; }
   .edit-btn { background: #f59e0b; color: white; margin-top: 8px; }
   .delete-btn { background: #dc2626; color: white; margin-top: 8px; }
   .preview { width: 100%; border-radius: 10px; display: none; margin-bottom: 8px; max-height: 200px; object-fit: cover; }
-  .product { background: #fff; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+  .product { background: var(--card-bg); padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: var(--shadow); }
   .product-image { width: 100%; border-radius: 10px; margin-bottom: 8px; max-height: 150px; object-fit: cover; }
-  .product-name { font-size: 16px; font-weight: bold; margin-bottom: 6px; word-break: break-word; }
-  .line { margin-top: 4px; font-size: 14px; color: #374151; }
-  .empty { background: #fff; padding: 20px; border-radius: 12px; text-align: center; color: #6b7280; }
+  .product-name { font-size: 16px; font-weight: bold; margin-bottom: 6px; word-break: break-word; color: var(--text-color); }
+  .line { margin-top: 4px; font-size: 14px; color: var(--text-muted); }
+  .empty { background: var(--card-bg); padding: 20px; border-radius: 12px; text-align: center; color: var(--text-muted); }
   
-  .suggestion-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 15px; background: #fff; transition: background 0.2s; }
-  .suggestion-item:hover { background: #f0fdf4; color: #16a34a; }
+  .suggestion-item { padding: 12px; border-bottom: 1px solid var(--border-color); cursor: pointer; font-size: 15px; background: var(--card-bg); color: var(--text-color); transition: background 0.2s; }
+  .suggestion-item:hover { background: #2563eb; color: white; }
   .suggestion-item:last-child { border-bottom: none; }
 
   /* إعدادات الصفحات */
   #settingsPage { display: none; }
-  .settings-group { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
-  .settings-group h3 { font-size: 16px; color: #1f2937; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+  .settings-group { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .settings-group h3 { font-size: 16px; color: var(--text-color); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
   
-  .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+  .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color); }
   .cat-item:last-child { border-bottom: none; }
+  .cat-item span { color: var(--text-color); }
   .cat-del-btn { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; width: auto; height: auto; margin: 0; font-size: 12px; }
+
+  /* زر التبديل بين الوضع الداكن والفاتح */
+  .theme-switch { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--input-bg); border-radius: 10px; cursor: pointer; border: 1px solid var(--border-color); }
+  .theme-switch span { font-size: 15px; font-weight: bold; }
+  .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+  .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: #2563eb; }
+  input:checked + .slider:before { transform: translateX(22px); }
 </style>
 </head>
 <body>
@@ -87,8 +119,8 @@
     <div style="position: relative; margin-bottom: 8px;">
       <input id="name" placeholder="اسم المنتج *" autocomplete="off" 
              onfocus="showSuggestions()" oninput="showSuggestions()" onblur="setTimeout(hideSuggestions, 200)" 
-             style="margin-bottom:0; width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; background:#fafafa;">
-      <div id="suggestionsBox" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:10px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+             style="margin-bottom:0;">
+      <div id="suggestionsBox" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card-bg); border:1px solid var(--border-color); border-radius:10px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
     </div>
 
     <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">📷 اختيار صورة</button>
@@ -115,6 +147,18 @@
     <button class="btn-icon btn-gray" onclick="toggleSettings()">🔙 رجوع</button>
   </div>
 
+  <!-- الوضع الداكن والفاتح -->
+  <div class="settings-group">
+    <h3>🎨 المظهر</h3>
+    <div class="theme-switch" onclick="toggleTheme()">
+      <span id="themeLabel">الوضع الفاتح ☀️</span>
+      <label class="switch">
+        <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
   <!-- إدارة الأصناف -->
   <div class="settings-group">
     <h3>🏷️ إدارة الفئات (الأصناف)</h3>
@@ -124,30 +168,12 @@
     </div>
     <div id="catList"></div>
   </div>
-
-  <!-- إعدادات اللغة والعملة -->
-  <div class="settings-group">
-    <h3>🌐 إعدادات اللغة والعملة</h3>
-    <label style="font-size:14px; margin-bottom:5px; display:block; color:#6b7280;">اللغة (قريباً)</label>
-    <select disabled>
-      <option>العربية</option>
-      <option>English</option>
-    </select>
-    
-    <label style="font-size:14px; margin-bottom:5px; display:block; color:#6b7280; margin-top:10px;">العملة الافتراضية</label>
-    <select id="currencySelect" onchange="saveCurrency()">
-      <option value="ر.س">ريال سعودي (ر.س)</option>
-      <option value="د.إ">درهم إماراتي (د.إ)</option>
-      <option value="$">دولار أمريكي ($)</option>
-      <option value="ج.م">جنيه مصري (ج.م)</option>
-    </select>
-  </div>
 </div>
 
 <script>
 // ================== إعدادات Supabase ==================
 const SUPABASE_URL = 'https://dqidszdrsmozozxatzlz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'
+const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'; 
 const BUCKET_NAME = 'product-images';
 
 const { createClient } = supabase;
@@ -158,7 +184,31 @@ let currentImageFile = null;
 let editingId = null;
 let allProductNames = [];
 let allCategories = [];
-let currentCurrency = localStorage.getItem('currency') || 'ر.س'; // حفظ العملة في الجهاز
+
+// ================== إعدادات الوضع الداكن والفاتح ==================
+function initTheme() {
+  const isDark = localStorage.getItem('darkMode') === 'true';
+  document.getElementById('themeToggle').checked = isDark;
+  if (isDark) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('themeLabel').textContent = 'الوضع الداكن 🌙';
+  } else {
+    document.body.classList.remove('dark-mode');
+    document.getElementById('themeLabel').textContent = 'الوضع الفاتح ☀️';
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.getElementById('themeToggle').checked;
+  localStorage.setItem('darkMode', isDark);
+  if (isDark) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('themeLabel').textContent = 'الوضع الداكن 🌙';
+  } else {
+    document.body.classList.remove('dark-mode');
+    document.getElementById('themeLabel').textContent = 'الوضع الفاتح ☀️';
+  }
+}
 
 // ================== التبديل بين الصفحات ==================
 function toggleSettings() {
@@ -167,11 +217,11 @@ function toggleSettings() {
   if (main.style.display === 'none') {
     main.style.display = 'block';
     settings.style.display = 'none';
-    loadProducts(); // تحديث المنتجات عند العودة
+    loadProducts();
   } else {
     main.style.display = 'none';
     settings.style.display = 'block';
-    loadCategories(); // تحديث الأصناف عند فتح الإعدادات
+    loadCategories();
   }
 }
 
@@ -196,19 +246,6 @@ function compressImage(file, maxW = 600, maxH = 600, quality = 0.7) {
     };
     reader.readAsDataURL(file);
   });
-}
-
-// ================== إعدادات العملة ==================
-function initCurrency() {
-  const select = document.getElementById('currencySelect');
-  if (select) select.value = currentCurrency;
-}
-function saveCurrency() {
-  currentCurrency = document.getElementById('currencySelect').value;
-  localStorage.setItem('currency', currentCurrency);
-  alert('تم حفظ العملة بنجاح');
-  // تحديث القائمة لعرض الأسعار بالعملة الجديدة
-  loadProducts();
 }
 
 // ================== إدارة الفئات (الأصناف) ==================
@@ -385,7 +422,7 @@ async function loadProducts() {
       <div class="product-name">📦 ${esc(p.name)}</div>
       <div class="line">🏷 ${esc(p.category)}</div>
       <div class="line">📊 الكمية: ${esc(p.quantity)}</div>
-      <div class="line">💰 السعر: ${esc(p.price)} ${currentCurrency}</div>
+      <div class="line">💰 السعر: ${esc(p.price)} ر.س</div>
       ${p.expiry ? `<div class="line">📅 ${esc(p.expiry)}</div>` : ''}
       <button class="edit-btn" onclick="editProduct(${p.id})">✏️ تعديل</button>
       <button class="delete-btn" onclick="deleteProduct(${p.id})">🗑 حذف</button>
@@ -420,7 +457,7 @@ function updateStats(products) {
   if (elTotal) elTotal.textContent = totalItems;
   
   const elValue = document.getElementById('statValue');
-  if (elValue) elValue.textContent = totalValue.toLocaleString('en-US') + ' ' + currentCurrency;
+  if (elValue) elValue.textContent = totalValue.toLocaleString('en-US') + ' ر.س';
   
   const elExpiring = document.getElementById('statExpiring');
   if (elExpiring) elExpiring.textContent = expiringSoon;
@@ -458,7 +495,7 @@ async function deleteProduct(id) {
 }
 
 // التشغيل الأولي
-initCurrency();
+initTheme();
 loadCategories();
 loadProducts();
 </script>
