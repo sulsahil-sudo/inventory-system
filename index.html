@@ -9,8 +9,13 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; }
   body { background: #f3f4f6; padding: 10px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); font-size: 15px; }
-  .header, .card { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
-  .header h2 { font-size: 18px; text-align: center; }
+  .header { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); display: flex; justify-content: space-between; align-items: center; }
+  .header h2 { font-size: 18px; margin: 0; }
+  .refresh-btn { background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; width: auto; height: auto; margin: 0; transition: background 0.2s; }
+  .refresh-btn:active { background: #2563eb; }
+  .refresh-btn:disabled { background: #9ca3af; cursor: wait; }
+  
+  .card { background: #fff; padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
   input, select { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; background: #fafafa; }
   button { width: 100%; height: 48px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
   .camera-btn { background: #2563eb; color: white; }
@@ -24,25 +29,20 @@
   .line { margin-top: 4px; font-size: 14px; color: #374151; }
   .empty { background: #fff; padding: 20px; border-radius: 12px; text-align: center; color: #6b7280; }
   
-  /* تنسيقات القائمة المنسدلة المخصصة */
-  .suggestion-item {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-    font-size: 15px;
-    background: #fff;
-    transition: background 0.2s;
-  }
+  .suggestion-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 15px; background: #fff; transition: background 0.2s; }
   .suggestion-item:hover { background: #f0fdf4; color: #16a34a; }
   .suggestion-item:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
 
-<div class="header"><h2>📦 إدارة المنتجات</h2></div>
+<!-- الهيدر مع زر التحديث -->
+<div class="header">
+  <h2>📦 إدارة المنتجات</h2>
+  <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 تحديث</button>
+</div>
 
 <div class="card">
-  <!-- حقل الاسم مع القائمة المنسدلة المخصصة -->
   <div style="position: relative; margin-bottom: 8px;">
     <input id="name" placeholder="اسم المنتج *" autocomplete="off" 
            onfocus="showSuggestions()" 
@@ -83,12 +83,11 @@ const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ================== المتغيرات ==================
 let currentImageFile = null;
 let editingId = null;
-let allProductNames = []; // لتخزين أسماء المنتجات للاقتراحات
+let allProductNames = [];
 
 // ================== دوال مساعدة ==================
 function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// ضغط الصورة
 function compressImage(file, maxW = 600, maxH = 600, quality = 0.7) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -113,45 +112,33 @@ function compressImage(file, maxW = 600, maxH = 600, quality = 0.7) {
 function showSuggestions() {
   const input = document.getElementById('name').value.trim().toLowerCase();
   const box = document.getElementById('suggestionsBox');
-  
-  // إذا كان الحقل فارغاً، اعرض كل الأسماء
   let filtered = allProductNames;
   if (input !== "") {
     filtered = allProductNames.filter(name => name.toLowerCase().includes(input));
   }
-  
   if (filtered.length === 0) { box.style.display = 'none'; return; }
-  
   box.innerHTML = filtered.map(name => 
     `<div class="suggestion-item" onmousedown="selectSuggestion('${esc(name)}')">${esc(name)}</div>`
   ).join('');
   box.style.display = 'block';
 }
-
 function selectSuggestion(name) {
   document.getElementById('name').value = name;
   document.getElementById('suggestionsBox').style.display = 'none';
 }
-
 function hideSuggestions() {
   document.getElementById('suggestionsBox').style.display = 'none';
 }
 
-// ================== رفع الصورة إلى Supabase Storage ==================
+// ================== رفع الصورة ==================
 async function uploadImage(file) {
   const compressedBlob = await compressImage(file);
   const fileName = `product_${Date.now()}.jpg`;
-  
   const { data, error } = await _supabase.storage
     .from(BUCKET_NAME)
     .upload(fileName, compressedBlob, { contentType: 'image/jpeg', upsert: true });
-
   if (error) throw new Error('فشل رفع الصورة: ' + error.message);
-
-  const { data: urlData } = _supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(fileName);
-
+  const { data: urlData } = _supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
   return urlData.publicUrl;
 }
 
@@ -186,7 +173,6 @@ async function addProduct() {
     if (currentImageFile) {
       imageUrl = await uploadImage(currentImageFile);
     }
-
     const productData = { name, category, quantity, price, expiry, image_url: imageUrl };
 
     if (editingId) {
@@ -198,7 +184,6 @@ async function addProduct() {
       if (error) throw error;
       alert('✅ تم إضافة المنتج');
     }
-
     resetForm();
     await loadProducts();
   } catch (err) {
@@ -223,6 +208,16 @@ function resetForm() {
   document.getElementById('addBtn').textContent = '➕ إضافة منتج';
 }
 
+// دالة التحديث اليدوي
+async function manualRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التحديث...';
+  await loadProducts();
+  btn.disabled = false;
+  btn.textContent = '🔄 تحديث';
+}
+
 async function loadProducts() {
   const list = document.getElementById('productsList');
   list.innerHTML = '<div class="empty">جاري التحميل...</div>';
@@ -242,7 +237,6 @@ async function loadProducts() {
     return;
   }
 
-  // عرض المنتجات
   list.innerHTML = products.map(p => `
     <div class="product">
       ${p.image_url ? `<img src="${p.image_url}" class="product-image" loading="lazy">` : ''}
@@ -256,7 +250,6 @@ async function loadProducts() {
     </div>
   `).join('');
 
-  // ✅ حفظ جميع أسماء المنتجات للاقتراحات (بدون تكرار)
   allProductNames = [...new Set(products.map(p => p.name))];
 }
 
@@ -277,7 +270,6 @@ async function editProduct(id) {
   } else {
     document.getElementById('preview').style.display = 'none';
   }
-  
   document.getElementById('addBtn').textContent = '🔄 تحديث المنتج';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -289,7 +281,7 @@ async function deleteProduct(id) {
   await loadProducts();
 }
 
-// ================== التشغيل الأولي ==================
+// التشغيل الأولي
 loadProducts();
 </script>
 
