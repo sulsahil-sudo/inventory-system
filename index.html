@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>إدارة المنتجات (Supabase)</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- استخدام رابط بديل لمكتبة Supabase لتجاوز حظر التتبع في الجوال -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg-color: #f3f4f6;
@@ -81,7 +82,6 @@
   input:checked + .slider { background-color: #2563eb; }
   input:checked + .slider:before { transform: translateX(22px); }
 
-  /* تنسيق النافذة المنبثقة (Modal) */
   .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; padding: 15px; }
   .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; border-radius: 16px; padding: 20px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
   .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
@@ -95,7 +95,6 @@
 </head>
 <body>
 
-<!-- ================= الصفحة الرئيسية ================= -->
 <div id="mainPage">
   <div class="header">
     <h2>📦 إدارة المنتجات</h2>
@@ -149,7 +148,6 @@
   <div id="productsList"></div>
 </div>
 
-<!-- ================= صفحة الإعدادات ================= -->
 <div id="settingsPage">
   <div class="header">
     <h2>⚙️ إعدادات النظام</h2>
@@ -167,7 +165,6 @@
     </div>
   </div>
 
-  <!-- زر تقرير الصلاحية -->
   <div class="settings-group">
     <h3>⚠️ تقرير الصلاحية</h3>
     <button id="expiryReportBtn" class="btn-warning" onclick="openExpiryReport()" style="color:white; font-size:15px;">📄 عرض تقرير الصلاحية</button>
@@ -200,7 +197,6 @@
   </div>
 </div>
 
-<!-- ================= النافذة المنبثقة لتقرير الصلاحية ================= -->
 <div class="modal-overlay" id="expiryModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -214,7 +210,7 @@
 <script>
 // ================== إعدادات Supabase ==================
 const SUPABASE_URL = 'https://dqidszdrsmozozxatzlz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'ا
+const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'
 const BUCKET_NAME = 'product-images';
 
 const { createClient } = supabase;
@@ -330,13 +326,8 @@ function openExpiryReport() {
   const today = new Date(); today.setHours(0,0,0,0);
   const nextMonth = new Date(); nextMonth.setDate(today.getDate() + 30);
 
-  // 1. المنتجات التي لها تاريخ انتهاء وقريبة أو منتهية
   let criticalProducts = allProductsData.filter(p => p.expiry && new Date(p.expiry) <= nextMonth).sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
-  
-  // 2. المنتجات التي لها تاريخ انتهاء ولكن بعيد
   let safeWithExpiry = allProductsData.filter(p => p.expiry && new Date(p.expiry) > nextMonth).sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
-  
-  // 3. المنتجات التي ليس لها تاريخ انتهاء
   let noExpiry = allProductsData.filter(p => !p.expiry);
 
   if (criticalProducts.length > 0) {
@@ -347,7 +338,6 @@ function openExpiryReport() {
 
   let html = '';
 
-  // عرض التنبيهات أولاً (إن وجدت)
   if (criticalProducts.length > 0) {
     html += criticalProducts.map(p => {
       const expDate = new Date(p.expiry);
@@ -361,7 +351,6 @@ function openExpiryReport() {
     html += '<div style="margin: 10px 0; border-bottom: 2px dashed var(--border-color);"></div>';
   }
 
-  // عرض باقي المنتجات الآمنة (التي لها تاريخ)
   if (safeWithExpiry.length > 0) {
     html += safeWithExpiry.map(p => {
       let dateStr = new Date(p.expiry).toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric', year: 'numeric' });
@@ -372,7 +361,6 @@ function openExpiryReport() {
     }).join('');
   }
 
-  // عرض المنتجات التي ليس لها تاريخ انتهاء
   if (noExpiry.length > 0) {
     if (safeWithExpiry.length > 0) {
       html += '<div style="margin: 10px 0; border-bottom: 2px dashed var(--border-color);"></div>';
