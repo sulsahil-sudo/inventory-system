@@ -270,7 +270,7 @@
 <script>
 // ================== إعدادات Supabase ==================
 const SUPABASE_URL = 'https://dqidszdrsmozozxatzlz.supabase.co';
-const SUPABASE_ANON_KEY = 'ضع_المفتاح_هنا'; // ⬅️ ضع المفتاح الخاص بك هنا
+const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'
 const BUCKET_NAME = 'product-images';
 
 const safeStorage = {
@@ -512,4 +512,214 @@ async function addProduct() {
 
     if (isUpdating) {
       const { error } = await _supabase.from('products').update(productData).eq('id', editingId);
-     
+      if (error) throw error;
+      alert('✅ تم تحديث المنتج');
+    } else {
+      const { error } = await _supabase.from('products').insert([productData]);
+      if (error) throw error;
+      alert('✅ تم إضافة المنتج');
+    }
+    resetForm();
+    await loadProducts();
+  } catch (err) {
+    alert('❌ خطأ: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editingId ? '🔄 تحديث المنتج' : '➕ إضافة منتج';
+  }
+}
+
+function resetForm() {
+  document.getElementById('name').value = '';
+  document.getElementById('location').value = '';
+  document.getElementById('quantity').value = '';
+  document.getElementById('price').value = '';
+  document.getElementById('expiry').value = '';
+  document.getElementById('preview').style.display = 'none';
+  document.getElementById('preview').removeAttribute('src');
+  document.getElementById('cameraInput').value = '';
+  currentImageFile = null;
+  existingImageUrl = null;
+  editingId = null;
+  document.getElementById('addBtn').textContent = '➕ إضافة منتج';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+async function manualRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  await Promise.all([loadLocations(), loadProducts()]);
+  btn.disabled = false; btn.textContent = '🔄';
+}
+
+async function loadProducts() {
+  const list = document.getElementById('productsList'); if (!list) return;
+  list.innerHTML = '<div class="empty">جاري التحميل...</div>';
+
+  const { data: products, error } = await _supabase.from('products').select('*').order('created_at', { ascending: false });
+
+  if (error) { list.innerHTML = '<div class="empty">خطأ في تحميل المنتجات: ' + esc(error.message) + '</div>'; return; }
+  allProductsData = products || [];
+
+  if (!products || products.length === 0) {
+    list.innerHTML = '<div class="empty">لا توجد منتجات مسجلة في مخزون البيت</div>';
+    updateStats([]); updateExpiryReportButton(); return;
+  }
+
+  list.innerHTML = products.map(p => `
+    <div class="product">
+      ${p.image_url ? `<img src="${esc(p.image_url)}" class="product-image" loading="lazy" alt="${esc(p.name)}">` : ''}
+      <div class="product-name">📦 ${esc(p.name)}</div>
+      <div class="line">📍 مكان التخزين: ${esc(p.location || 'غير محدد')}</div>
+      <div class="line">📊 الكمية: ${esc(p.quantity)}</div>
+      <div class="line">💰 السعر: ${esc(p.price)} ${esc(currentCurrency)}</div>
+      ${p.expiry ? `<div class="line">📅 الصلاحية: ${esc(p.expiry)}</div>` : ''}
+      <button type="button" class="edit-btn" onclick="editProduct(${p.id})">✏️ تعديل</button>
+      <button type="button" class="delete-btn" onclick="deleteProduct(${p.id})">🗑 حذف</button>
+    </div>
+  `).join('');
+
+  allProductNames = [...new Set(products.map(p => p.name).filter(Boolean))];
+  updateStats(products); updateExpiryReportButton();
+}
+
+function updateStats(products) {
+  const totalItems = products.length;
+  let totalValue = 0, expiringSoon = 0, outOfStock = 0;
+  const today = getStartOfToday(); const nextMonth = new Date(today); nextMonth.setDate(today.getDate() + 30);
+
+  products.forEach(p => {
+    const qty = Number(p.quantity) || 0, price = Number(p.price) || 0;
+    totalValue += (qty * price);
+    if (qty <= 0) outOfStock++;
+    const expDate = parseDateOnly(p.expiry);
+    if (expDate && expDate <= nextMonth) expiringSoon++;
+  });
+
+  const elTotal = document.getElementById('statTotal'); if (elTotal) elTotal.textContent = totalItems;
+  const elValue = document.getElementById('statValue'); if (elValue) elValue.textContent = totalValue.toLocaleString('en-US') + ' ' + currentCurrency;
+  const elExpiring = document.getElementById('statExpiring'); if (elExpiring) elExpiring.textContent = expiringSoon;
+  const elOut = document.getElementById('statOut'); if (elOut) elOut.textContent = outOfStock;
+}
+
+async function editProduct(id) {
+  const { data: product, error } = await _supabase.from('products').select('*').eq('id', id).single();
+  if (error || !product) return;
+  editingId = id; existingImageUrl = product.image_url || null; currentImageFile = null;
+  document.getElementById('name').value = product.name || '';
+  document.getElementById('location').value = product.location || '';
+  document.getElementById('quantity').value = product.quantity ?? '';
+  document.getElementById('price').value = product.price ?? '';
+  document.getElementById('expiry').value = product.expiry || '';
+  const preview = document.getElementById('preview');
+  if (product.image_url) { preview.src = product.image_url; preview.style.display = 'block'; }
+  else { preview.style.display = 'none'; preview.removeAttribute('src'); }
+  document.getElementById('addBtn').textContent = '🔄 تحديث المنتج';
+  document.getElementById('cancelEditBtn').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteProduct(id) {
+  if (!confirm('هل تريد حذف المنتج؟')) return;
+  const { error } = await _supabase.from('products').delete().eq('id', id);
+  if (error) { alert('فشل الحذف: ' + error.message); return; }
+  if (editingId === id) resetForm();
+  await loadProducts();
+}
+
+// ================== دوال سجل الأخطاء (المضافة) ==================
+async function loadErrorReports() {
+  const statsDiv = document.getElementById('errorLogStats');
+  statsDiv.innerHTML = 'جاري تحميل الإحصائيات...';
+
+  const { data, error } = await _supabase.from('error_reports').select('*').order('created_at', { ascending: false });
+
+  if (error) {
+    statsDiv.innerHTML = 'خطأ في تحميل السجل: ' + esc(error.message);
+    return;
+  }
+
+  allErrorReports = data || [];
+
+  const totalReports = allErrorReports.length;
+  const totalErrors = allErrorReports.reduce((sum, r) => sum + (Number(r.details?.count) || 1), 0);
+  const oldestDate = totalReports > 0 ? new Date(allErrorReports[allErrorReports.length - 1].created_at).toLocaleDateString('ar-EG') : 'لا يوجد';
+  const newestDate = totalReports > 0 ? new Date(allErrorReports[0].created_at).toLocaleDateString('ar-EG') : 'لا يوجد';
+
+  statsDiv.innerHTML = `
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>عدد التقارير:</span> <strong>${totalReports}</strong></div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>عدد الأخطاء:</span> <strong>${totalErrors}</strong></div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>أقدم تقرير:</span> <strong>${oldestDate}</strong></div>
+    <div style="display: flex; justify-content: space-between;"><span>أحدث تقرير:</span> <strong>${newestDate}</strong></div>
+  `;
+
+  updateCleanupPreview();
+}
+
+function getCleanupPreview(retentionDays) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+  const toDelete = allErrorReports.filter(report => new Date(report.created_at) < cutoffDate);
+  const toKeep = allErrorReports.filter(report => new Date(report.created_at) >= cutoffDate);
+
+  const deleteErrors = toDelete.reduce((sum, r) => sum + (Number(r.details?.count) || 1), 0);
+  const keepErrors = toKeep.reduce((sum, r) => sum + (Number(r.details?.count) || 1), 0);
+
+  return { totalReports: allErrorReports.length, deleteCount: toDelete.length, keepCount: toKeep.length, deleteErrors, keepErrors };
+}
+
+function updateCleanupPreview() {
+  const retentionDays = Number(document.getElementById('cleanupDays').value);
+  const previewDiv = document.getElementById('cleanupPreview');
+
+  if (!allErrorReports || allErrorReports.length === 0) {
+    previewDiv.innerHTML = 'لا توجد تقارير حالياً.';
+    return;
+  }
+
+  const result = getCleanupPreview(retentionDays);
+  previewDiv.innerHTML = `
+    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>🗑 سيتم حذف:</span> <strong>${result.deleteCount} تقرير (${result.deleteErrors} خطأ)</strong></div>
+    <div style="display: flex; justify-content: space-between;"><span>✅ سيتم الاحتفاظ:</span> <strong>${result.keepCount} تقرير (${result.keepErrors} خطأ)</strong></div>
+  `;
+}
+
+async function manualCleanupReports() {
+  const retentionDays = Number(document.getElementById('cleanupDays').value);
+  const preview = getCleanupPreview(retentionDays);
+
+  if (preview.deleteCount === 0) { alert('لا توجد تقارير أقدم من المدة المحددة.'); return; }
+
+  if (!confirm(`سيتم حذف ${preview.deleteCount} تقرير تحتوي على ${preview.deleteErrors} خطأ. هل تريد المتابعة؟`)) return;
+
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+  const { error } = await _supabase.from('error_reports').delete().lt('created_at', cutoffDate.toISOString());
+
+  if (error) alert('فشل التنظيف: ' + error.message);
+  else { alert('✅ تم تنظيف التقارير بنجاح'); await loadErrorReports(); }
+}
+
+async function clearAllErrorReports() {
+  if (!confirm('سيتم حذف جميع تقارير الأخطاء نهائياً. هل تريد المتابعة؟')) return;
+  if (!confirm('هل أنت متأكد؟ لا يمكن التراجع عن هذه العملية.')) return;
+  const code = prompt('اكتب كلمة DELETE للتأكيد النهائي:');
+  if (code !== 'DELETE') { alert('تم إلغاء العملية.'); return; }
+
+  const { error } = await _supabase.from('error_reports').delete().neq('id', 0);
+
+  if (error) alert('فشل الحذف: ' + error.message);
+  else { alert('✅ تم حذف جميع التقارير بنجاح'); await loadErrorReports(); }
+}
+
+// التشغيل الأولي
+initTheme();
+initCurrency();
+loadLocations();
+loadProducts();
+</script>
+
+</body>
+</html>
