@@ -68,6 +68,7 @@
   .btn-gray { background: #64748b; }
   .btn-warning { background: #f59e0b; }
   .btn-danger { background: #dc2626; }
+  .btn-green { background: #16a34a; }
 
   .stats-container { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
   .stat-card { background: var(--card-bg); padding: 12px; border-radius: 12px; box-shadow: var(--shadow); text-align: center; min-width: 0; }
@@ -92,7 +93,6 @@
   }
 
   .camera-btn { background: #2563eb; color: white; }
-  .add-btn { background: #16a34a; color: white; }
   .cancel-btn { background: #64748b; color: white; display: none; }
   .edit-btn { background: #f59e0b; color: white; margin-top: 8px; }
   .delete-btn { background: #dc2626; color: white; margin-top: 8px; }
@@ -146,6 +146,7 @@
   <div class="header">
     <h2>📦 مخزون البيت</h2>
     <div class="header-actions">
+      <button type="button" class="btn-icon btn-green" id="topAddBtn" onclick="scrollToForm()">➕ إضافة</button>
       <button type="button" class="btn-icon" id="refreshBtn" onclick="manualRefresh()">🔄</button>
       <button type="button" class="btn-icon btn-gray" onclick="toggleSettings()">⚙️</button>
     </div>
@@ -158,7 +159,7 @@
     <div class="stat-card out-of-stock"><div class="title">نفدت الكمية</div><div class="value" id="statOut">0</div></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="productForm">
     <div style="position: relative; margin-bottom: 8px;">
       <input id="name" placeholder="اسم المنتج *" autocomplete="off" onfocus="showSuggestions()" oninput="showSuggestions()" onblur="setTimeout(hideSuggestions, 200)" style="margin-bottom:0;">
       <div id="suggestionsBox" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card-bg); border:1px solid var(--border-color); border-radius:10px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
@@ -167,16 +168,14 @@
     <input type="file" id="cameraInput" accept="image/*" style="display:none">
     <img id="preview" class="preview" alt="معاينة المنتج">
     
-    <!-- قائمة أماكن التخزين -->
     <select id="location"><option value="">اختر مكان التخزين *</option></select>
-    
-    <!-- قائمة نوع العبوة (جديدة) -->
     <select id="packaging"><option value="">اختر نوع العبوة</option></select>
     
     <input id="quantity" type="number" placeholder="الكمية *" min="0" step="any">
     <input id="price" type="number" placeholder="السعر *" min="0" step="any">
     <input id="expiry" type="date">
-    <button type="button" id="addBtn" class="add-btn" onclick="addProduct()">➕ إضافة منتج</button>
+    
+    <button type="button" id="addBtn" class="btn-green" onclick="addProduct()" style="height:48px; border-radius:10px; color:white; font-size:16px; margin-top:6px;">➕ حفظ المنتج</button>
     <button type="button" id="cancelEditBtn" class="cancel-btn" onclick="resetForm()">✖️ إلغاء التعديل</button>
   </div>
   <div id="productsList"></div>
@@ -205,21 +204,19 @@
     <button type="button" id="expiryReportBtn" class="btn-warning" onclick="openExpiryReport()" style="color:white; font-size:15px;">📄 عرض تقرير الصلاحية</button>
   </div>
 
-  <!-- إدارة أماكن التخزين -->
   <div class="settings-group">
     <h3>📍 إدارة أماكن التخزين</h3>
     <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <input type="text" id="newLocName" placeholder="اسم مكان التخزين الجديد..." style="margin-bottom:0; flex:1;">
+      <input type="text" id="newLocName" placeholder="اسم مكان التخزين..." style="margin-bottom:0; flex:1;">
       <button type="button" id="addLocBtn" onclick="addLocation()" style="background:#16a34a; color:white; width:84px; height:44px; margin:0; font-size:14px; flex-shrink:0;">إضافة</button>
     </div>
     <div id="locList" class="item-list"></div>
   </div>
 
-  <!-- إدارة أنواع العبوات (جديد) -->
   <div class="settings-group">
     <h3>📦 إدارة أنواع العبوات</h3>
     <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <input type="text" id="newPackagingName" placeholder="اسم نوع العبوة..." style="margin-bottom:0; flex:1;">
+      <input type="text" id="newPackagingName" placeholder="اسم العبوة..." style="margin-bottom:0; flex:1;">
       <button type="button" id="addPackagingBtn" onclick="addPackaging()" style="background:#16a34a; color:white; width:84px; height:44px; margin:0; font-size:14px; flex-shrink:0;">إضافة</button>
     </div>
     <div id="packagingList" class="item-list"></div>
@@ -304,7 +301,7 @@ let existingImageUrl = null;
 let editingId = null;
 let allProductNames = [];
 let allLocations = [];
-let allPackagings = []; // جديد
+let allPackagings = [];
 let allProductsData = [];
 let currentCurrency = safeStorage.get('currency') || 'ر.س';
 let allErrorReports = [];
@@ -360,6 +357,16 @@ function toggleTheme() {
   safeStorage.set('darkMode', String(isDark));
   if (isDark) { document.body.classList.add('dark-mode'); document.getElementById('themeLabel').textContent = 'الوضع الداكن 🌙'; }
   else { document.body.classList.remove('dark-mode'); document.getElementById('themeLabel').textContent = 'الوضع الفاتح ☀️'; }
+}
+
+// ================== التمرير إلى النموذج ==================
+function scrollToForm() {
+  const form = document.getElementById('productForm');
+  if (form) {
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // التركيز على حقل الاسم
+    setTimeout(() => { document.getElementById('name').focus(); }, 500);
+  }
 }
 
 // ================== التبديل بين الصفحات ==================
@@ -475,7 +482,7 @@ async function deleteLocation(id) {
   await loadLocations();
 }
 
-// ================== إدارة أنواع العبوات (جديد) ==================
+// ================== إدارة أنواع العبوات ==================
 async function loadPackagings() {
   const { data, error } = await _supabase.from('packaging_types').select('*').order('id', { ascending: true });
   if (error) { console.error(error); return; }
@@ -535,7 +542,7 @@ document.getElementById('cameraInput').addEventListener('change', function(e) {
 async function addProduct() {
   const name = document.getElementById('name').value.trim().replace(/\s+/g, ' ');
   const location = document.getElementById('location').value;
-  const packaging = document.getElementById('packaging').value; // جديد
+  const packaging = document.getElementById('packaging').value;
   const qtyRaw = document.getElementById('quantity').value;
   const priceRaw = document.getElementById('price').value;
   const expiryVal = document.getElementById('expiry').value;
@@ -554,7 +561,6 @@ async function addProduct() {
     let imageUrl = isUpdating ? existingImageUrl : null;
     if (currentImageFile) imageUrl = await uploadImage(currentImageFile);
 
-    // إضافة حقل العبوة إلى البيانات
     const productData = { name, location, packaging, quantity, price, expiry: expiryVal ? expiryVal : null, image_url: imageUrl };
 
     if (isUpdating) {
@@ -572,14 +578,14 @@ async function addProduct() {
     alert('❌ خطأ: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = editingId ? '🔄 تحديث المنتج' : '➕ إضافة منتج';
+    btn.textContent = editingId ? '🔄 تحديث المنتج' : '➕ حفظ المنتج';
   }
 }
 
 function resetForm() {
   document.getElementById('name').value = '';
   document.getElementById('location').value = '';
-  document.getElementById('packaging').value = ''; // جديد
+  document.getElementById('packaging').value = '';
   document.getElementById('quantity').value = '';
   document.getElementById('price').value = '';
   document.getElementById('expiry').value = '';
@@ -589,7 +595,7 @@ function resetForm() {
   currentImageFile = null;
   existingImageUrl = null;
   editingId = null;
-  document.getElementById('addBtn').textContent = '➕ إضافة منتج';
+  document.getElementById('addBtn').textContent = '➕ حفظ المنتج';
   document.getElementById('cancelEditBtn').style.display = 'none';
 }
 
@@ -619,7 +625,7 @@ async function loadProducts() {
       ${p.image_url ? `<img src="${esc(p.image_url)}" class="product-image" loading="lazy" alt="${esc(p.name)}">` : ''}
       <div class="product-name">📦 ${esc(p.name)}</div>
       <div class="line">📍 مكان التخزين: ${esc(p.location || 'غير محدد')}</div>
-      ${p.packaging ? `<div class="line">🎁 نوع العبوة: ${esc(p.packaging)}</div>` : ''} <!-- جديد -->
+      ${p.packaging ? `<div class="line">🎁 نوع العبوة: ${esc(p.packaging)}</div>` : ''}
       <div class="line">📊 الكمية: ${esc(p.quantity)}</div>
       <div class="line">💰 السعر: ${esc(p.price)} ${esc(currentCurrency)}</div>
       ${p.expiry ? `<div class="line">📅 الصلاحية: ${esc(p.expiry)}</div>` : ''}
@@ -657,7 +663,7 @@ async function editProduct(id) {
   editingId = id; existingImageUrl = product.image_url || null; currentImageFile = null;
   document.getElementById('name').value = product.name || '';
   document.getElementById('location').value = product.location || '';
-  document.getElementById('packaging').value = product.packaging || ''; // جديد
+  document.getElementById('packaging').value = product.packaging || '';
   document.getElementById('quantity').value = product.quantity ?? '';
   document.getElementById('price').value = product.price ?? '';
   document.getElementById('expiry').value = product.expiry || '';
@@ -768,7 +774,7 @@ async function clearAllErrorReports() {
 initTheme();
 initCurrency();
 loadLocations();
-loadPackagings(); // جديد
+loadPackagings();
 loadProducts();
 </script>
 
