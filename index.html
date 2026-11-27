@@ -203,7 +203,20 @@
     <h3>⚠️ تقرير الصلاحية</h3>
     <button type="button" id="expiryReportBtn" class="btn-warning" onclick="openExpiryReport()" style="color:white; font-size:15px;">📄 عرض تقرير الصلاحية</button>
   </div>
+<div class="settings-group">
 
+  <h3>📊 تقارير المخزون</h3>
+
+  <button
+    class="btn-icon"
+    style="background:#16a34a;width:100%;margin-top:10px;"
+    onclick="openInventoryReport()">
+
+    📊 تقرير الموجودات الشامل
+
+  </button>
+
+</div>
   <div class="settings-group">
     <h3>📍 إدارة أماكن التخزين</h3>
     <div style="display:flex; gap:6px; margin-bottom:10px;">
@@ -682,7 +695,188 @@ async function deleteProduct(id) {
   if (editingId === id) resetForm();
   await loadProducts();
 }
+function openInventoryReport(){
 
+const modal =
+document.getElementById(
+'expiryModal'
+);
+
+const title =
+document.getElementById(
+'modalTitle'
+);
+
+const body =
+document.getElementById(
+'modalBody'
+);
+
+title.innerHTML =
+'📊 تقرير الموجودات الشامل';
+
+let totalValue = 0;
+
+let html = '';
+
+const sortedProducts =
+[...allProductsData].sort((a,b)=>{
+
+if(!a.expiry) return 1;
+if(!b.expiry) return -1;
+
+return (
+new Date(a.expiry)
+-
+new Date(b.expiry)
+);
+
+});
+
+sortedProducts.forEach(p=>{
+    const qty =
+Number(p.quantity || 0);
+
+const price =
+Number(p.price || 0);
+
+const value =
+qty * price;
+
+totalValue += value;
+
+let status =
+'🟢 جيد';
+
+let daysInfo =
+'غير محدد';
+
+if(p.expiry){
+
+const daysLeft =
+Math.ceil(
+(
+new Date(p.expiry) -
+new Date()
+)
+/
+86400000
+);
+
+if(daysLeft < 0){
+
+status =
+'🔴 منتهي';
+
+daysInfo =
+`منتهي منذ ${Math.abs(daysLeft)} يوم`;
+
+}else if(daysLeft <= 30){
+
+status =
+'🟠 قريب الانتهاء';
+
+daysInfo =
+`متبقي ${daysLeft} يوم`;
+
+}else{
+
+daysInfo =
+`متبقي ${daysLeft} يوم`;
+
+}
+
+}
+html += `
+
+<div class="product">
+
+<div class="product-name">
+
+📦 ${esc(p.name)}
+
+</div>
+
+<div class="line">
+
+📍 ${esc(
+p.location || "-"
+)}
+
+</div>
+
+<div class="line">
+
+📊 الكمية:
+${qty}
+
+</div>
+
+<div class="line">
+
+💰 السعر:
+${price}
+${currentCurrency}
+
+</div>
+
+<div class="line">
+
+💵 القيمة:
+${value}
+${currentCurrency}
+
+</div>
+
+<div class="line">
+
+⏳ ${daysInfo}
+
+</div>
+
+<div class="line">
+
+${status}
+
+</div>
+
+</div>
+
+`;
+
+});
+
+body.innerHTML =
+
+`
+
+<div class="product">
+
+<div class="line">
+
+📦 إجمالي الأصناف:
+${allProductsData.length}
+
+</div>
+
+<div class="line">
+
+💰 إجمالي قيمة المخزون:
+${totalValue.toLocaleString()}
+${currentCurrency}
+
+</div>
+
+</div>
+
+${html}
+
+`;
+
+modal.style.display =
+'flex';
+
+}
 // ================== دوال سجل الأخطاء ==================
 async function loadErrorReports() {
   const statsDiv = document.getElementById('errorLogStats');
