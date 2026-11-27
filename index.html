@@ -113,10 +113,11 @@
   .settings-group { background: var(--card-bg); padding: 14px; border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
   .settings-group h3 { font-size: 16px; color: var(--text-color); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
 
-  .loc-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color); }
-  .loc-item:last-child { border-bottom: none; }
-  .loc-item span { color: var(--text-color); }
-  .loc-del-btn { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; width: auto; height: auto; margin: 0; font-size: 12px; }
+  .item-list { display: flex; flex-direction: column; gap: 5px; }
+  .list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color); }
+  .list-item:last-child { border-bottom: none; }
+  .list-item span { color: var(--text-color); }
+  .del-btn { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; width: auto; height: auto; margin: 0; font-size: 12px; }
 
   .theme-switch { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--input-bg); border-radius: 10px; cursor: pointer; border: 1px solid var(--border-color); }
   .theme-switch span { font-size: 15px; font-weight: bold; }
@@ -165,7 +166,13 @@
     <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">📷 اختيار صورة</button>
     <input type="file" id="cameraInput" accept="image/*" style="display:none">
     <img id="preview" class="preview" alt="معاينة المنتج">
+    
+    <!-- قائمة أماكن التخزين -->
     <select id="location"><option value="">اختر مكان التخزين *</option></select>
+    
+    <!-- قائمة نوع العبوة (جديدة) -->
+    <select id="packaging"><option value="">اختر نوع العبوة</option></select>
+    
     <input id="quantity" type="number" placeholder="الكمية *" min="0" step="any">
     <input id="price" type="number" placeholder="السعر *" min="0" step="any">
     <input id="expiry" type="date">
@@ -198,13 +205,24 @@
     <button type="button" id="expiryReportBtn" class="btn-warning" onclick="openExpiryReport()" style="color:white; font-size:15px;">📄 عرض تقرير الصلاحية</button>
   </div>
 
+  <!-- إدارة أماكن التخزين -->
   <div class="settings-group">
     <h3>📍 إدارة أماكن التخزين</h3>
     <div style="display:flex; gap:6px; margin-bottom:10px;">
       <input type="text" id="newLocName" placeholder="اسم مكان التخزين الجديد..." style="margin-bottom:0; flex:1;">
       <button type="button" id="addLocBtn" onclick="addLocation()" style="background:#16a34a; color:white; width:84px; height:44px; margin:0; font-size:14px; flex-shrink:0;">إضافة</button>
     </div>
-    <div id="locList"></div>
+    <div id="locList" class="item-list"></div>
+  </div>
+
+  <!-- إدارة أنواع العبوات (جديد) -->
+  <div class="settings-group">
+    <h3>📦 إدارة أنواع العبوات</h3>
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <input type="text" id="newPackagingName" placeholder="اسم نوع العبوة..." style="margin-bottom:0; flex:1;">
+      <button type="button" id="addPackagingBtn" onclick="addPackaging()" style="background:#16a34a; color:white; width:84px; height:44px; margin:0; font-size:14px; flex-shrink:0;">إضافة</button>
+    </div>
+    <div id="packagingList" class="item-list"></div>
   </div>
 
   <div class="settings-group">
@@ -230,12 +248,10 @@
     <h2>🧹 سجل الأخطاء</h2>
     <button type="button" class="btn-icon btn-gray" onclick="closeErrorLogs()">🔙 رجوع</button>
   </div>
-
   <div class="settings-group">
     <h3>📊 ملخص السجل</h3>
     <div id="errorLogStats" style="font-size:14px; line-height:1.8;">جاري التحميل...</div>
   </div>
-
   <div class="settings-group">
     <h3>🧹 تنظيف التقارير</h3>
     <label style="font-size:14px; margin-bottom:5px; display:block; color:var(--text-muted);">حذف التقارير الأقدم من:</label>
@@ -249,7 +265,6 @@
     <div id="cleanupPreview" style="font-size:14px; background:var(--input-bg); padding:10px; border-radius:8px; margin-bottom:10px;">جاري المعاينة...</div>
     <button type="button" class="btn-danger" onclick="manualCleanupReports()" style="color:white;">🧹 تنظيف التقارير القديمة</button>
   </div>
-
   <div class="settings-group">
     <h3>🗑 حذف كامل</h3>
     <button type="button" class="btn-danger" onclick="clearAllErrorReports()" style="color:white;">🗑 حذف جميع تقارير الأخطاء</button>
@@ -270,7 +285,7 @@
 <script>
 // ================== إعدادات Supabase ==================
 const SUPABASE_URL = 'https://dqidszdrsmozozxatzlz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_D352-8kPFwD4JJAA7QRybA_QFyEBohq'
+const SUPABASE_ANON_KEY = 'ضع_المفتاح_هنا'; // ⬅️ ضع المفتاح الخاص بك هنا
 const BUCKET_NAME = 'product-images';
 
 const safeStorage = {
@@ -289,6 +304,7 @@ let existingImageUrl = null;
 let editingId = null;
 let allProductNames = [];
 let allLocations = [];
+let allPackagings = []; // جديد
 let allProductsData = [];
 let currentCurrency = safeStorage.get('currency') || 'ر.س';
 let allErrorReports = [];
@@ -353,10 +369,10 @@ function toggleSettings() {
   const errorLogs = document.getElementById('errorLogsPage');
   if (main.style.display === 'none') {
     main.style.display = 'block'; settings.style.display = 'none'; errorLogs.style.display = 'none';
-    loadLocations(); loadProducts();
+    loadLocations(); loadPackagings(); loadProducts();
   } else {
     main.style.display = 'none'; settings.style.display = 'block'; errorLogs.style.display = 'none';
-    loadLocations(); updateExpiryReportButton();
+    loadLocations(); loadPackagings(); updateExpiryReportButton();
   }
 }
 
@@ -392,6 +408,7 @@ function renderExpiryRow(p, today) {
   const expDate = parseDateOnly(p.expiry);
   const isExpired = expDate ? expDate < today : false;
   const locationText = esc(p.location || 'غير محدد');
+  const packagingText = esc(p.packaging || 'غير محدد');
   const qtyText = esc(p.quantity ?? 0);
   const remainingText = esc(getRemainingExpiryText(expDate, today));
   const dateLabel = expDate ? expDate.toLocaleDateString('ar-SA', { day: 'numeric', month: 'numeric', year: 'numeric' }) : 'غير محدد';
@@ -400,7 +417,7 @@ function renderExpiryRow(p, today) {
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
         <strong>${esc(p.name)}</strong><span class="date">${dateLabel}</span>
       </div>
-      <div style="font-size:13px; color:var(--text-muted);">العدد: ${qtyText} • مكان التخزين: ${locationText}</div>
+      <div style="font-size:13px; color:var(--text-muted);">العدد: ${qtyText} • التخزين: ${locationText} • العبوة: ${packagingText}</div>
       <div style="font-size:13px; font-weight:bold;">المدة: ${remainingText}</div>
     </div>`;
 }
@@ -438,7 +455,7 @@ async function loadLocations() {
   const select = document.getElementById('location');
   if (select) { const currentVal = select.value; select.innerHTML = '<option value="">اختر مكان التخزين *</option>' + allLocations.map(loc => `<option value="${esc(loc.name)}">${esc(loc.name)}</option>`).join(''); select.value = currentVal; }
   const locList = document.getElementById('locList');
-  if (locList) { locList.innerHTML = allLocations.length === 0 ? '<div class="empty" style="padding:10px; font-size:14px;">لا توجد أماكن تخزين</div>' : allLocations.map(loc => `<div class="loc-item"><span>${esc(loc.name)}</span><button type="button" class="loc-del-btn" onclick="deleteLocation(${loc.id})">حذف</button></div>`).join(''); }
+  if (locList) { locList.innerHTML = allLocations.length === 0 ? '<div class="empty" style="padding:10px; font-size:14px;">لا توجد أماكن تخزين</div>' : allLocations.map(loc => `<div class="list-item"><span>${esc(loc.name)}</span><button type="button" class="del-btn" onclick="deleteLocation(${loc.id})">حذف</button></div>`).join(''); }
 }
 
 async function addLocation() {
@@ -456,6 +473,34 @@ async function deleteLocation(id) {
   const { error } = await _supabase.from('locations').delete().eq('id', id);
   if (error) { alert('فشل الحذف'); return; }
   await loadLocations();
+}
+
+// ================== إدارة أنواع العبوات (جديد) ==================
+async function loadPackagings() {
+  const { data, error } = await _supabase.from('packaging_types').select('*').order('id', { ascending: true });
+  if (error) { console.error(error); return; }
+  allPackagings = data || [];
+  const select = document.getElementById('packaging');
+  if (select) { const currentVal = select.value; select.innerHTML = '<option value="">اختر نوع العبوة</option>' + allPackagings.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join(''); select.value = currentVal; }
+  const list = document.getElementById('packagingList');
+  if (list) { list.innerHTML = allPackagings.length === 0 ? '<div class="empty" style="padding:10px; font-size:14px;">لا توجد أنواع عبوات</div>' : allPackagings.map(p => `<div class="list-item"><span>${esc(p.name)}</span><button type="button" class="del-btn" onclick="deletePackaging(${p.id})">حذف</button></div>`).join(''); }
+}
+
+async function addPackaging() {
+  const input = document.getElementById('newPackagingName'); const name = input.value.trim().replace(/\s+/g, ' ');
+  if (!name) { alert('أدخل اسم نوع العبوة'); return; }
+  const btn = document.getElementById('addPackagingBtn'); btn.disabled = true; btn.textContent = '...';
+  const { error } = await _supabase.from('packaging_types').insert([{ name }]);
+  if (error) alert('خطأ: ' + (error.code === '23505' ? 'هذا النوع موجود مسبقاً' : error.message));
+  else { input.value = ''; await loadPackagings(); }
+  btn.disabled = false; btn.textContent = 'إضافة';
+}
+
+async function deletePackaging(id) {
+  if (!confirm('هل تريد حذف نوع العبوة هذا؟')) return;
+  const { error } = await _supabase.from('packaging_types').delete().eq('id', id);
+  if (error) { alert('فشل الحذف'); return; }
+  await loadPackagings();
 }
 
 // ================== اقتراحات أسماء المنتجات ==================
@@ -490,6 +535,7 @@ document.getElementById('cameraInput').addEventListener('change', function(e) {
 async function addProduct() {
   const name = document.getElementById('name').value.trim().replace(/\s+/g, ' ');
   const location = document.getElementById('location').value;
+  const packaging = document.getElementById('packaging').value; // جديد
   const qtyRaw = document.getElementById('quantity').value;
   const priceRaw = document.getElementById('price').value;
   const expiryVal = document.getElementById('expiry').value;
@@ -508,7 +554,8 @@ async function addProduct() {
     let imageUrl = isUpdating ? existingImageUrl : null;
     if (currentImageFile) imageUrl = await uploadImage(currentImageFile);
 
-    const productData = { name, location, quantity, price, expiry: expiryVal ? expiryVal : null, image_url: imageUrl };
+    // إضافة حقل العبوة إلى البيانات
+    const productData = { name, location, packaging, quantity, price, expiry: expiryVal ? expiryVal : null, image_url: imageUrl };
 
     if (isUpdating) {
       const { error } = await _supabase.from('products').update(productData).eq('id', editingId);
@@ -532,6 +579,7 @@ async function addProduct() {
 function resetForm() {
   document.getElementById('name').value = '';
   document.getElementById('location').value = '';
+  document.getElementById('packaging').value = ''; // جديد
   document.getElementById('quantity').value = '';
   document.getElementById('price').value = '';
   document.getElementById('expiry').value = '';
@@ -548,7 +596,7 @@ function resetForm() {
 async function manualRefresh() {
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true; btn.textContent = '⏳';
-  await Promise.all([loadLocations(), loadProducts()]);
+  await Promise.all([loadLocations(), loadPackagings(), loadProducts()]);
   btn.disabled = false; btn.textContent = '🔄';
 }
 
@@ -571,6 +619,7 @@ async function loadProducts() {
       ${p.image_url ? `<img src="${esc(p.image_url)}" class="product-image" loading="lazy" alt="${esc(p.name)}">` : ''}
       <div class="product-name">📦 ${esc(p.name)}</div>
       <div class="line">📍 مكان التخزين: ${esc(p.location || 'غير محدد')}</div>
+      ${p.packaging ? `<div class="line">🎁 نوع العبوة: ${esc(p.packaging)}</div>` : ''} <!-- جديد -->
       <div class="line">📊 الكمية: ${esc(p.quantity)}</div>
       <div class="line">💰 السعر: ${esc(p.price)} ${esc(currentCurrency)}</div>
       ${p.expiry ? `<div class="line">📅 الصلاحية: ${esc(p.expiry)}</div>` : ''}
@@ -608,6 +657,7 @@ async function editProduct(id) {
   editingId = id; existingImageUrl = product.image_url || null; currentImageFile = null;
   document.getElementById('name').value = product.name || '';
   document.getElementById('location').value = product.location || '';
+  document.getElementById('packaging').value = product.packaging || ''; // جديد
   document.getElementById('quantity').value = product.quantity ?? '';
   document.getElementById('price').value = product.price ?? '';
   document.getElementById('expiry').value = product.expiry || '';
@@ -627,7 +677,7 @@ async function deleteProduct(id) {
   await loadProducts();
 }
 
-// ================== دوال سجل الأخطاء (المضافة) ==================
+// ================== دوال سجل الأخطاء ==================
 async function loadErrorReports() {
   const statsDiv = document.getElementById('errorLogStats');
   statsDiv.innerHTML = 'جاري تحميل الإحصائيات...';
@@ -718,6 +768,7 @@ async function clearAllErrorReports() {
 initTheme();
 initCurrency();
 loadLocations();
+loadPackagings(); // جديد
 loadProducts();
 </script>
 
